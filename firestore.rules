@@ -1,0 +1,100 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isAdmin() { 
+      return isSignedIn() && (
+        request.auth.token.email == 'ansariasif5413@gmail.com' ||
+        request.auth.token.get('email', '') == 'ansariasif5413@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      ); 
+    }
+    
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // --- Validation Helpers ---
+    function isValidUser(data) {
+      return data != null && 
+             data.keys().hasAll(['fullName', 'role', 'email']) &&
+             data.fullName is string && data.fullName.size() <= 100 &&
+             data.role in ['customer', 'seller', 'admin'] &&
+             data.email is string && data.email.size() <= 100;
+    }
+
+    function isValidOrder(data) {
+      return data != null && 
+             data.keys().hasAll(['customerId', 'items', 'status', 'totalAmount', 'location', 'createdAt']) &&
+             data.customerId == request.auth.uid && 
+             data.status == 'pending' &&
+             data.totalAmount is number &&
+             data.items is list &&
+             data.items.size() > 0;
+    }
+
+    // --- Rules ---
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin() || (resource != null && resource.data.get('role', '') == 'seller'));
+      allow list: if isSignedIn() && (isAdmin() || (resource != null && resource.data.get('role', '') == 'seller' && resource.data.get('isOnline', false) == true));
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming());
+      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /users/{userId}/sellerData/profile {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId) || isAdmin();
+    }
+
+    match /orders/{orderId} {
+      allow get: if isSignedIn() && (
+        resource.data.customerId == request.auth.uid || 
+        resource.data.sellerId == request.auth.uid || 
+        resource.data.status == 'pending' ||
+        isAdmin()
+      );
+      // Robust listing for stakeholders
+      allow list: if isSignedIn() && (
+        isAdmin() || 
+        (resource.data.get('customerId', '') == request.auth.uid) || 
+        (resource.data.get('sellerId', '') == request.auth.uid) || 
+        (resource.data.get('status', '') == 'pending')
+      );
+      allow create: if isSignedIn() && isValidOrder(incoming());
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        // Customer: Cancel
+        (existing().customerId == request.auth.uid && incoming().status == 'cancelled' && incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
+        // Customer: Scratch Reward
+        (existing().customerId == request.auth.uid && existing().rewardAvailable == true && incoming().rewardAvailable == false && incoming().diff(existing()).affectedKeys().hasOnly(['rewardAvailable'])) ||
+        // Seller: Accept
+        (existing().status == 'pending' && incoming().status == 'accepted' && incoming().sellerId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'sellerId'])) ||
+        // Seller: Progress or Deliver with reward
+        (existing().sellerId == request.auth.uid && (
+          (incoming().status == 'ongoing' && incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
+          (incoming().status == 'delivered' && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'rewardAvailable', 'rewardAmount']))
+        ))
+      );
+    }
+
+    match /demand/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    
+    // Explicit match for any other top level collections
+    match /admins/{adminId} {
+      allow read: if isAdmin();
+      allow write: if false; // System only
+    }
+  }
+}

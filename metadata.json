@@ -1,0 +1,11 @@
+{
+  "name": "SmartSabji Route",
+  "description": "Premium, ultra-formal logistics platform for localized vegetable supply chains, featuring real-time demand mapping and elite route optimization for neighborhood operators.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "real_time_tracking",
+    "route_optimization"
+  ]
+}

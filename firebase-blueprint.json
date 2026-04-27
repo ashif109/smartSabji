@@ -1,0 +1,54 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System user with role-based access",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "fullName": { "type": "string" },
+        "role": { "type": "string", "enum": ["customer", "seller", "admin"] },
+        "coins": { "type": "number", "description": "Super coin balance" },
+        "subscriptionExpiry": { "type": "string", "format": "date-time" },
+        "phoneNumber": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "role"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Vegetable order placed by a customer",
+      "type": "object",
+      "properties": {
+        "customerId": { "type": "string" },
+        "sellerId": { "type": "string" },
+        "items": { "type": "array" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "ongoing", "delivered", "cancelled"] },
+        "location": { "type": "object", "properties": { "lat": { "type": "number" }, "lng": { "type": "number" }, "address": { "type": "string" } } },
+        "timeSlot": { "type": "string" },
+        "notes": { "type": "string" },
+        "coinsEarned": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["customerId", "items", "status", "location"]
+    },
+    "SellerProfile": {
+      "title": "Seller Profile",
+      "description": "Extended profile information for sellers",
+      "type": "object",
+      "properties": {
+        "vehicleType": { "type": "string" },
+        "serviceArea": { "type": "string" },
+        "isKycVerified": { "type": "boolean" },
+        "currentLocation": { "type": "object", "properties": { "lat": { "type": "number" }, "lng": { "type": "number" }, "updatedAt": { "type": "string", "format": "date-time" } } },
+        "isOnline": { "type": "boolean" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "Root user profile" },
+    "/users/{userId}/sellerData/profile": { "schema": "SellerProfile", "description": "Seller-specific data" },
+    "/orders/{orderId}": { "schema": "Order", "description": "Order records" },
+    "/demand": { "schema": { "type": "object", "properties": { "locations": { "type": "array" } } }, "description": "Aggregated demand for heatmap" }
+  }
+}

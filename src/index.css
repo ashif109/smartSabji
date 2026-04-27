@@ -1,0 +1,64 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap');
+@import "leaflet/dist/leaflet.css";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", sans-serif;
+  
+  --color-brand: #FFB800;
+  --color-brand-muted: rgba(255, 184, 0, 0.15);
+  --color-dark: #000000;
+  --color-surface: #0A0A0A;
+  --color-surface-hover: #121212;
+  --color-line: #1C1C1C;
+}
+
+body {
+  @apply bg-dark text-white font-sans antialiased selection:bg-brand selection:text-dark;
+}
+
+h1, h2, h3, h4 {
+  @apply font-display tracking-tight leading-[0.85] uppercase font-black;
+}
+
+.premium-card {
+  @apply bg-surface border border-line rounded-[40px] overflow-hidden transition-all duration-500 ease-out;
+}
+
+.premium-card:hover {
+  @apply border-brand/40 bg-surface-hover shadow-[0_0_40px_-15px_rgba(255,184,0,0.2)];
+}
+
+.btn-brand {
+  @apply bg-brand text-dark px-10 py-5 rounded-[40px] font-display font-black text-xl uppercase tracking-tighter hover:bg-[#E6A600] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 shadow-[0_10px_20px_-10px_rgba(255,184,0,0.4)];
+}
+
+.btn-outline {
+  @apply bg-transparent text-white px-10 py-5 rounded-[40px] font-display font-black text-xl uppercase tracking-tighter border-2 border-line hover:border-brand transition-all hover:scale-[1.02] active:scale-[0.98];
+}
+
+.input-premium {
+  @apply w-full bg-surface border border-line rounded-[24px] px-8 py-5 outline-none focus:border-brand focus:ring-1 focus:ring-brand text-xl transition-all placeholder:text-neutral-700 font-medium;
+}
+
+/* Leaflet Dark Mode - Premium */
+.leaflet-container {
+  @apply grayscale invert brightness-90 hue-rotate-180 contrast-125;
+}
+
+.glass-pill {
+  @apply bg-white/5 backdrop-blur-2xl border border-white/5 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #000;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-brand/30 rounded-full hover:bg-brand/60;
+}
+
