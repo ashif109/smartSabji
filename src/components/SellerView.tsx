@@ -70,21 +70,47 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
     });
 
     let watchId: number;
+    let heartbeatInterval: number;
+
     if (seller.isOnline) {
+      const performUpdate = (lat: number, lng: number) => {
+        updateDoc(doc(db, 'users', seller.id), {
+          currentLocation: {
+            lat,
+            lng,
+            updatedAt: new Date().toISOString()
+          }
+        }).catch(err => {
+          if (err.code !== 'permission-denied') {
+            console.error("Location sync interrupted", err);
+          }
+        });
+        (window as any)._lastLocationUpdate = Date.now();
+      };
+
       if ('geolocation' in navigator) {
         watchId = navigator.geolocation.watchPosition((pos) => {
-          updateDoc(doc(db, 'users', seller.id), {
-            currentLocation: {
-              lat: pos.coords.latitude,
-              lng: pos.coords.longitude,
-              updatedAt: new Date().toISOString()
-            }
-          }).catch(err => console.error("Location update failed", err));
-        }, (err) => console.error("Geolocation error", err), {
+          const { latitude: lat, longitude: lng } = pos.coords;
+          const lastUpdate = (window as any)._lastLocationUpdate || 0;
+          const now = Date.now();
+          
+          if (now - lastUpdate > 2000) {
+            performUpdate(lat, lng);
+          }
+        }, (err) => {
+          if (err.code === 1) console.warn("Location transmission blocked.");
+        }, {
           enableHighAccuracy: true,
-          timeout: 10000,
+          timeout: 5000,
           maximumAge: 0
         });
+
+        // Heartbeat every 30 seconds if stationary to maintain "Live" status
+        heartbeatInterval = window.setInterval(() => {
+          navigator.geolocation.getCurrentPosition((pos) => {
+            performUpdate(pos.coords.latitude, pos.coords.longitude);
+          }, undefined, { enableHighAccuracy: true });
+        }, 30000);
       }
     }
 
@@ -92,6 +118,7 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
       unsubPending();
       unsubAssigned();
       if (watchId) navigator.geolocation.clearWatch(watchId);
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
     };
   }, [seller.isOnline, seller.id]);
 
@@ -228,7 +255,8 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
         transaction.update(orderRef, { 
           status: 'delivered',
           rewardAvailable: true,
-          rewardAmount: earnedSuperCoins
+          rewardAmount: earnedSuperCoins,
+          updatedAt: new Date().toISOString()
         });
         
         // Award directly to customer profile for real-time gratification

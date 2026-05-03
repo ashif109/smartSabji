@@ -84,3 +84,29 @@ h1, h2, h3, h4 {
   @apply bg-black/40 backdrop-blur-md border border-white/10;
 }
 
+/* Marker Animations for Real-time Tracking */
+.custom-div-icon-animate {
+  transition: all 1s linear;
+}
+
+.marker-pin-wrapper {
+  transition: transform 1s linear;
+  will-change: transform;
+}
+
+/* Ensure leaflet markers don't transition their opacity/visibility in a way that breaks */
+.leaflet-marker-icon {
+  transition: transform 0.5s linear !important;
+}
+
+/* Tracking Signal Animation */
+@keyframes pulse-signal {
+  0% { transform: scale(0.95); opacity: 0.5; }
+  50% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.5; }
+}
+
+.tracking-signal {
+  animation: pulse-signal 2s infinite ease-in-out;
+}
+

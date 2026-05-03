@@ -44,10 +44,14 @@ service cloud.firestore {
     // --- Rules ---
 
     match /users/{userId} {
-      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin() || (resource != null && resource.data.get('role', '') == 'seller'));
+      allow get: if isSignedIn();
       allow list: if isSignedIn() && (isAdmin() || (resource != null && resource.data.get('role', '') == 'seller' && resource.data.get('isOnline', false) == true));
       allow create: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming());
-      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow update: if isSignedIn() && (
+        request.auth.uid == userId || 
+        isAdmin() ||
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller' && incoming().diff(existing()).affectedKeys().hasOnly(['superCoins']))
+      );
     }
 
     match /users/{userId}/sellerData/profile {
@@ -73,15 +77,17 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         isAdmin() ||
         // Customer: Cancel
-        (existing().customerId == request.auth.uid && incoming().status == 'cancelled' && incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
+        (existing().customerId == request.auth.uid && incoming().status == 'cancelled' && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
         // Customer: Scratch Reward
-        (existing().customerId == request.auth.uid && existing().rewardAvailable == true && incoming().rewardAvailable == false && incoming().diff(existing()).affectedKeys().hasOnly(['rewardAvailable'])) ||
+        (existing().customerId == request.auth.uid && existing().rewardAvailable == true && incoming().rewardAvailable == false && incoming().diff(existing()).affectedKeys().hasOnly(['rewardAvailable', 'updatedAt'])) ||
+        // Customer: Rate Order
+        (existing().customerId == request.auth.uid && existing().status == 'delivered' && !existing().keys().hasAll(['rating']) && incoming().keys().hasAll(['rating', 'qualityRating', 'updatedAt']) && incoming().diff(existing()).affectedKeys().hasOnly(['rating', 'qualityRating', 'updatedAt'])) ||
         // Seller: Accept
-        (existing().status == 'pending' && incoming().status == 'accepted' && incoming().sellerId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'sellerId'])) ||
+        (existing().status == 'pending' && incoming().status == 'accepted' && incoming().sellerId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'sellerId', 'updatedAt'])) ||
         // Seller: Progress or Deliver with reward
         (existing().sellerId == request.auth.uid && (
-          (incoming().status == 'ongoing' && incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
-          (incoming().status == 'delivered' && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'rewardAvailable', 'rewardAmount']))
+          (incoming().status == 'ongoing' && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'departureTime', 'updatedAt'])) ||
+          (incoming().status == 'delivered' && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'rewardAvailable', 'rewardAmount', 'updatedAt']))
         ))
       );
     }

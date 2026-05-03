@@ -132,7 +132,10 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
         transaction.update(userRef, { 
           superCoins: (userSnap.data().superCoins || 0) + (scratchReward.rewardAmount || 0) 
         });
-        transaction.update(orderRef, { rewardAvailable: false });
+        transaction.update(orderRef, { 
+          rewardAvailable: false,
+          updatedAt: new Date().toISOString()
+        });
       });
       setScratchReward(null);
       setScratchProgress(0);
@@ -431,6 +434,46 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
               </div>
             </div>
 
+            {/* Flash Protocol - Advanced Daily Deals */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-end px-1">
+                <div>
+                  <h3 className="text-lg font-black uppercase tracking-tighter">Flash Protocol</h3>
+                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Priority pricing for elite nodes</p>
+                </div>
+                <div className="flex items-center gap-2 bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20">
+                  <div className="w-1 h-1 bg-red-500 rounded-full animate-ping" />
+                  <span className="text-[8px] font-black text-red-600 uppercase tracking-widest">ENDS IN 04:22:15</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="premium-card p-4 bg-white border-l-4 border-l-brand flex items-center justify-between group cursor-pointer hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">🍅</div>
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-tight">Bulk Tomato Pack</h4>
+                      <p className="text-[10px] font-bold text-brand uppercase">₹32/kg <span className="text-gray-400 line-through">₹45</span></p>
+                    </div>
+                  </div>
+                  <div className="bg-brand/10 text-brand px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                    -28%
+                  </div>
+                </div>
+                <div className="premium-card p-4 bg-white border-l-4 border-l-brand flex items-center justify-between group cursor-pointer hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">🥬</div>
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-tight">Elite Spinach Bundle</h4>
+                      <p className="text-[10px] font-bold text-brand uppercase">₹18/bn <span className="text-gray-400 line-through">₹25</span></p>
+                    </div>
+                  </div>
+                  <div className="bg-brand/10 text-brand px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                    -35%
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Map Preview */}
             <div className="space-y-4" id="nearby-retailers">
               <div className="flex justify-between items-center px-1">
@@ -684,18 +727,32 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="premium-card p-6 flex flex-col gap-4 bg-brand group hover:scale-[1.02] transition-transform cursor-pointer">
-                <Zap className="w-8 h-8 text-white fill-white" />
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">Super Coins</p>
-                  <p className="text-3xl font-black text-white tabular-nums">{user.superCoins || 0}</p>
+              <div className="premium-card p-5 flex flex-col gap-3 bg-white border border-gray-100 group hover:scale-[1.02] transition-transform cursor-pointer relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-3 opacity-[0.05]">
+                  <Zap className="w-12 h-12 text-brand fill-brand" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-brand fill-brand" />
+                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none">Wallet Node</p>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-2xl font-black text-gray-800 tabular-nums tracking-tighter">{user.superCoins || 0}</p>
+                  <p className="text-[8px] font-bold text-brand uppercase tracking-widest">Est. Value: ₹{(user.superCoins || 0) * 0.5}</p>
                 </div>
               </div>
-              <div className="premium-card p-6 flex flex-col gap-4 bg-gray-800 group hover:scale-[1.02] transition-transform cursor-pointer">
-                <ShoppingCart className="w-8 h-8 text-white" />
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">Total Orders</p>
-                  <p className="text-3xl font-black text-white tabular-nums">{myOrders.length}</p>
+              <div className="premium-card p-5 flex flex-col gap-3 bg-white border border-gray-100 group hover:scale-[1.02] transition-transform cursor-pointer relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-3 opacity-[0.05]">
+                  <ShoppingCart className="w-12 h-12 text-gray-800" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4 text-gray-400" />
+                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none">Order Sentinel</p>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-2xl font-black text-gray-800 tabular-nums tracking-tighter">{myOrders.length}</p>
+                  <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">
+                    {myOrders.filter(o => o.status !== 'delivered').length} Active Ops
+                  </p>
                 </div>
               </div>
             </div>
@@ -766,16 +823,16 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
 
         <AnimatePresence>
           {showCart && (
-            <div className="fixed inset-0 z-50 flex justify-end">
+            <div className="fixed inset-0 z-[200] flex justify-end">
               <motion.div 
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 onClick={() => setShowCart(false)}
-                className="absolute inset-0 bg-dark/95 backdrop-blur-sm"
+                className="absolute inset-0 bg-dark/95 backdrop-blur-md"
               />
               <motion.div 
                 initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                 transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                className="relative w-full max-w-xl bg-surface border-l border-line shadow-[-40px_0_100px_rgba(0,0,0,0.5)] flex flex-col h-[100dvh]"
+                className="relative w-full max-w-xl bg-white border-l border-line shadow-[-40px_0_100px_rgba(0,0,0,0.5)] flex flex-col h-[100dvh]"
               >
                 <div className="p-6 sm:p-12 pb-6 sm:pb-8 flex flex-col gap-3 sm:gap-4 border-b border-line">
                   <div className="flex justify-between items-center">
@@ -803,17 +860,17 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
                           <p className="font-black text-xl sm:text-3xl tracking-tighter uppercase leading-none">{item.name}</p>
                           <p className="text-neutral-500 font-bold text-xs sm:text-sm mt-1 sm:mt-2">₹{item.price} / {item.unit}</p>
                         </div>
-                        <div className="flex items-center gap-3 sm:gap-6 bg-dark p-1.5 sm:p-2 rounded-xl sm:rounded-[24px] border border-line">
-                          <button onClick={() => updateQuantity(item.id, -1)} className="w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center hover:bg-neutral-800 rounded-full transition-colors"><Minus className="w-3 h-3 sm:w-4 sm:h-4" /></button>
-                          <span className="font-black text-lg sm:text-2xl w-6 sm:w-8 text-center tabular-nums leading-none">{item.quantity}</span>
-                          <button onClick={() => updateQuantity(item.id, 1)} className="w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center hover:bg-neutral-800 rounded-full transition-colors"><Plus className="w-3 h-3 sm:w-4 sm:h-4" /></button>
+                        <div className="flex items-center gap-3 sm:gap-6 bg-neutral-900 p-1.5 sm:p-2 rounded-xl sm:rounded-[24px] border border-neutral-800 text-white shadow-lg">
+                          <button onClick={() => updateQuantity(item.id, -1)} className="w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center hover:bg-neutral-800 rounded-full transition-colors text-white"><Minus className="w-4 h-4 sm:w-5 sm:h-5" /></button>
+                          <span className="font-black text-xl sm:text-2xl w-6 sm:w-8 text-center tabular-nums leading-none text-white">{item.quantity}</span>
+                          <button onClick={() => updateQuantity(item.id, 1)} className="w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center hover:bg-neutral-800 rounded-full transition-colors text-white"><Plus className="w-4 h-4 sm:w-5 sm:h-5" /></button>
                         </div>
                       </div>
                     ))
                   )}
                 </div>
                 {cart.length > 0 && (
-                  <div className="p-6 sm:p-12 pt-6 sm:pt-8 bg-white border-t border-gray-100 space-y-6 sm:space-y-10 mb-[env(safe-area-inset-bottom)]">
+                  <div className="p-6 sm:p-12 pt-6 sm:pt-8 bg-white border-t border-gray-100 space-y-6 sm:space-y-10 pb-12 sm:pb-20">
                     <div className="flex justify-between items-end">
                       <div className="space-y-1">
                         <p className="text-gray-400 font-black uppercase tracking-[0.2em] text-[8px] sm:text-[10px] leading-none">Order Total</p>
@@ -1361,7 +1418,8 @@ const SellerInfoDisplay: React.FC<{ sellerId: string; status: string; orderLocat
     return {
       minutes: totalMinutes,
       stops: stopsBefore,
-      distance: totalDist.toFixed(1)
+      distance: totalDist.toFixed(1),
+      isMoving: totalDist > 0.01 // Simple movement check
     };
   }, [seller, sellerOrders, orderId]);
 
@@ -1445,9 +1503,11 @@ const SellerInfoDisplay: React.FC<{ sellerId: string; status: string; orderLocat
                   ]}
                 />
                 <div className="absolute top-4 left-4 right-4 flex justify-between pointer-events-none">
-                  <div className="bg-white/90 backdrop-blur px-2.5 py-1.5 rounded-lg border border-gray-100 shadow-sm flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 bg-brand rounded-full animate-pulse" />
-                    <span className="text-[8px] font-black text-brand uppercase tracking-widest">Live Signal Active</span>
+                  <div className="bg-white/95 backdrop-blur px-2.5 py-1.5 rounded-lg border border-gray-100 shadow-sm flex items-center gap-2">
+                    <span className={cn("w-1.5 h-1.5 rounded-full", etaInfo.isMoving ? "bg-brand animate-ping" : "bg-brand")} />
+                    <span className="text-[8px] font-black text-brand uppercase tracking-widest">
+                      {etaInfo.isMoving ? "Courier in Motion" : "Arrived at Stop"}
+                    </span>
                   </div>
                 </div>
               </div>

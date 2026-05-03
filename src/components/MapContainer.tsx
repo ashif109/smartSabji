@@ -85,6 +85,37 @@ const MapRecenter: React.FC<{ center: [number, number], force?: boolean }> = ({ 
   return null;
 };
 
+const MapAutoFit: React.FC<{ markers?: MapProps['markers'], path?: MapProps['path'] }> = ({ markers, path }) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    if ((!markers || markers.length === 0) && (!path || path.length === 0)) return;
+
+    const bounds = L.latLngBounds([]);
+    
+    // Add markers to bounds
+    markers?.forEach(marker => {
+      bounds.extend([marker.lat, marker.lng]);
+    });
+
+    // Add path to bounds
+    path?.forEach(point => {
+      bounds.extend(point);
+    });
+
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { 
+        padding: [30, 30], // More concise padding
+        maxZoom: 16, 
+        duration: 1.5,
+        easeLinearity: 0.25
+      });
+    }
+  }, [map, markers, path]);
+
+  return null;
+};
+
 const MapComponent: React.FC<MapProps> = ({ 
   markers, 
   heatmapPoints, 
@@ -96,7 +127,7 @@ const MapComponent: React.FC<MapProps> = ({
   highDemandZones 
 }) => {
   const [isLoading, setIsLoading] = useState(true);
-  const [forceRecenter, setForceRecenter] = useState(true);
+  const [forceRecenter, setForceRecenter] = useState(false); // Changed to false by default to let AutoFit handle initial view
   const mapCenter = useMemo((): [number, number] => 
     centerPos ? [centerPos.lat, centerPos.lng] : center, 
   [centerPos]);
@@ -138,6 +169,7 @@ const MapComponent: React.FC<MapProps> = ({
         />
         
         <MapRecenter center={mapCenter} force={forceRecenter} />
+        <MapAutoFit markers={markers} path={path} />
         {onMapClick && <MapEvents onClick={onMapClick} />}
 
         {/* User Interaction Layer */}
@@ -200,8 +232,8 @@ const MapComponent: React.FC<MapProps> = ({
           const isMeMarker = marker.id === 'me' || marker.id === 'selected';
           
           const markerIcon = L.divIcon({
-            className: 'custom-div-icon',
-            html: `<div class="relative flex items-center justify-center">
+            className: 'custom-div-icon-animate',
+            html: `<div class="marker-pin-wrapper relative flex items-center justify-center transition-all duration-1000 ease-linear">
               ${isMeMarker ? `
                 <div class="absolute -inset-4 bg-blue-500/20 rounded-full animate-ping opacity-20"></div>
                 <div class="absolute -inset-2 bg-blue-500/10 rounded-full"></div>
