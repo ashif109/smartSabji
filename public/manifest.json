@@ -1,0 +1,17 @@
+{
+  "name": "Super Coin Rewards",
+  "short_name": "SuperCoin",
+  "description": "Premium Vegetable Delivery & Rewards",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0F0B",
+  "theme_color": "#22C55E",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2329/2329865.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

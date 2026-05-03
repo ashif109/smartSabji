@@ -6,59 +6,81 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Outfit", sans-serif;
   
-  --color-brand: #FFB800;
-  --color-brand-muted: rgba(255, 184, 0, 0.15);
-  --color-dark: #000000;
-  --color-surface: #0A0A0A;
-  --color-surface-hover: #121212;
-  --color-line: #1C1C1C;
+  --color-brand: #22C55E;
+  --color-brand-muted: rgba(34, 197, 94, 0.1);
+  --color-dark: #111827;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F9FAFB;
+  --color-line: #F3F4F6;
 }
 
 body {
-  @apply bg-dark text-white font-sans antialiased selection:bg-brand selection:text-dark;
+  @apply bg-[#F4F7F5] text-dark font-sans antialiased selection:bg-brand selection:text-white;
 }
 
 h1, h2, h3, h4 {
-  @apply font-display tracking-tight leading-[0.85] uppercase font-black;
+  @apply font-display tracking-tight font-bold;
 }
 
 .premium-card {
-  @apply bg-surface border border-line rounded-[40px] overflow-hidden transition-all duration-500 ease-out;
+  @apply bg-white border border-line rounded-[24px] overflow-hidden transition-all duration-300 ease-out shadow-sm;
 }
 
 .premium-card:hover {
-  @apply border-brand/40 bg-surface-hover shadow-[0_0_40px_-15px_rgba(255,184,0,0.2)];
+  @apply border-brand/20 bg-white shadow-xl shadow-brand/5;
 }
 
 .btn-brand {
-  @apply bg-brand text-dark px-10 py-5 rounded-[40px] font-display font-black text-xl uppercase tracking-tighter hover:bg-[#E6A600] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 shadow-[0_10px_20px_-10px_rgba(255,184,0,0.4)];
+  @apply bg-brand text-white px-8 py-4 rounded-[18px] font-display font-bold text-lg hover:bg-[#16A34A] transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 shadow-lg shadow-brand/20;
 }
 
 .btn-outline {
-  @apply bg-transparent text-white px-10 py-5 rounded-[40px] font-display font-black text-xl uppercase tracking-tighter border-2 border-line hover:border-brand transition-all hover:scale-[1.02] active:scale-[0.98];
+  @apply bg-transparent text-brand px-8 py-4 rounded-[18px] font-display font-bold text-lg border-2 border-brand/20 hover:bg-brand/5 transition-all;
 }
 
 .input-premium {
-  @apply w-full bg-surface border border-line rounded-[24px] px-8 py-5 outline-none focus:border-brand focus:ring-1 focus:ring-brand text-xl transition-all placeholder:text-neutral-700 font-medium;
+  @apply w-full bg-white border border-gray-200 rounded-[18px] px-6 py-4 outline-none focus:border-brand focus:ring-1 focus:ring-brand text-base transition-all placeholder:text-gray-400 font-medium shadow-sm;
 }
 
-/* Leaflet Dark Mode - Premium */
+/* Update Map for Green Theme - Natural */
 .leaflet-container {
-  @apply grayscale invert brightness-90 hue-rotate-180 contrast-125;
+  @apply rounded-[32px] overflow-hidden border-2 border-white shadow-2xl;
 }
 
 .glass-pill {
-  @apply bg-white/5 backdrop-blur-2xl border border-white/5 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400;
+  @apply bg-brand/10 text-brand border border-brand/20 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider;
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar - Green */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #000;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-brand/30 rounded-full hover:bg-brand/60;
+  @apply bg-brand/20 rounded-full hover:bg-brand/40;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.glass-dark {
+  @apply bg-black/40 backdrop-blur-md border border-white/10;
 }
 

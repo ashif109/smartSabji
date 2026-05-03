@@ -1,5 +1,5 @@
 {
-  "name": "SmartSabji Route",
+  "name": "VegieRoute",
   "description": "Premium, ultra-formal logistics platform for localized vegetable supply chains, featuring real-time demand mapping and elite route optimization for neighborhood operators.",
   "requestFramePermissions": [
     "geolocation"

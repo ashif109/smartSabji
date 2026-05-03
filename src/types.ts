@@ -11,16 +11,29 @@ export interface UserProfile {
   createdAt: string;
 }
 
+export interface Review {
+  id: string;
+  customerId: string;
+  customerName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
 export interface SellerProfile extends UserProfile {
   vehicleType: string;
   serviceArea: string;
   isKycVerified: boolean;
   isOnline: boolean;
   onboardingComplete?: boolean;
+  membershipPlan?: 'standard' | 'premium' | 'enterprise';
   businessDetails?: {
     shopName?: string;
     address?: string;
     description?: string;
+    operatingHours?: string;
+    bio?: string;
+    logoUrl?: string;
   };
   paymentInfo?: {
     upiId?: string;
@@ -34,6 +47,7 @@ export interface SellerProfile extends UserProfile {
   };
   averageRating?: number;
   totalRatings?: number;
+  reviews?: Review[];
 }
 
 export interface VegetableItem {

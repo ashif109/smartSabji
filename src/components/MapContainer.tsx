@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap, Polyline, Circle } from 'react-leaflet';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Navigation } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet.heat';
+import { cn } from '../lib/utils';
 
 // Fix for Leaflet default icon issues in React
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -29,6 +30,7 @@ interface MapProps {
     description?: string;
     icon?: string;
     details?: React.ReactNode;
+    logoUrl?: string;
   }>;
   heatmapPoints?: Array<{ lat: number; lng: number; weight: number }>;
   onMarkerClick?: (id: string) => void;
@@ -73,11 +75,13 @@ const MapEvents: React.FC<{ onClick: (lat: number, lng: number) => void }> = ({ 
   return null;
 };
 
-const MapRecenter: React.FC<{ center: [number, number] }> = ({ center }) => {
+const MapRecenter: React.FC<{ center: [number, number], force?: boolean }> = ({ center, force }) => {
   const map = useMap();
   useEffect(() => {
-    map.setView(center);
-  }, [center, map]);
+    if (force) {
+      map.setView(center, map.getZoom());
+    }
+  }, [center, map, force]);
   return null;
 };
 
@@ -92,27 +96,27 @@ const MapComponent: React.FC<MapProps> = ({
   highDemandZones 
 }) => {
   const [isLoading, setIsLoading] = useState(true);
+  const [forceRecenter, setForceRecenter] = useState(true);
   const mapCenter = useMemo((): [number, number] => 
     centerPos ? [centerPos.lat, centerPos.lng] : center, 
   [centerPos]);
 
   return (
-    <div className="w-full h-full relative z-0 dark-map">
+    <div className="w-full h-full relative z-0">
       <AnimatePresence>
         {isLoading && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-[1000] bg-neutral-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4"
+            className="absolute inset-0 z-[1000] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4"
           >
             <div className="relative">
-              <div className="absolute inset-0 bg-brand/20 blur-xl rounded-full animate-pulse"></div>
               <Loader2 className="w-10 h-10 text-brand animate-spin relative z-10" />
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-[10px] font-black text-white uppercase tracking-[0.3em] animate-pulse">Initializing Vector Hub</span>
-              <span className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest mt-1">Fetching Terrain Data...</span>
+              <span className="text-[10px] font-black text-brand uppercase tracking-[0.3em] animate-pulse">VegieRoute Radar</span>
+              <span className="text-[8px] text-gray-400 font-bold uppercase tracking-widest mt-1">Fetching Terrain Data...</span>
             </div>
           </motion.div>
         )}
@@ -122,40 +126,55 @@ const MapComponent: React.FC<MapProps> = ({
         center={mapCenter} 
         zoom={zoom} 
         scrollWheelZoom={true}
-        className="w-full h-full"
+        className="w-full h-full rounded-[24px]"
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.basemaps.cartocdn.com/dark_all/copyright">CartoDB</a> contributors'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://www.basemaps.cartocdn.com/rastertiles/voyager/copyright">CartoDB</a> contributors'
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           eventHandlers={{
             loading: () => setIsLoading(true),
             load: () => setIsLoading(false),
           }}
         />
         
-        <MapRecenter center={mapCenter} />
+        <MapRecenter center={mapCenter} force={forceRecenter} />
         {onMapClick && <MapEvents onClick={onMapClick} />}
+
+        {/* User Interaction Layer */}
+        <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2 pointer-events-auto">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              setForceRecenter(true);
+              // Reset after small delay to allow manual panning again
+              setTimeout(() => setForceRecenter(false), 500);
+            }}
+            className="w-10 h-10 bg-white rounded-xl shadow-xl flex items-center justify-center text-brand hover:bg-brand hover:text-white transition-all border border-gray-100"
+            title="Snap to Live Location"
+          >
+            <Navigation className={cn("w-5 h-5", forceRecenter ? "animate-pulse" : "")} />
+          </button>
+        </div>
 
         {path && path.length > 1 && (
           <>
             {/* Outer Glow */}
             <Polyline 
               positions={path} 
-              color="#3B82F6" 
+              color="#22C55E" 
               weight={10} 
-              opacity={0.3}
+              opacity={0.2}
               lineJoin="round"
               lineCap="round"
             />
-            {/* Main Path (White Line like Rapido/Uber Navigation) */}
+            {/* Main Path */}
             <Polyline 
               positions={path} 
-              color="#FFFFFF" 
+              color="#22C55E" 
               weight={5} 
-              opacity={1}
+              opacity={0.8}
               lineJoin="round"
               lineCap="round"
-              className="route-line-main"
             />
           </>
         )}
@@ -166,22 +185,11 @@ const MapComponent: React.FC<MapProps> = ({
               center={[zone.lat, zone.lng]} 
               radius={200}
               pathOptions={{ 
-                fillColor: '#ef4444', 
-                color: '#ef4444', 
+                fillColor: '#22C55E', 
+                color: '#22C55E', 
                 weight: 2, 
-                opacity: 0.3, 
-                fillOpacity: 0.1 
-              }} 
-            />
-            <Circle 
-              center={[zone.lat, zone.lng]} 
-              radius={100}
-              pathOptions={{ 
-                fillColor: '#ef4444', 
-                color: '#ef4444', 
-                weight: 1, 
-                opacity: 0.6, 
-                fillOpacity: 0.4 
+                opacity: 0.2, 
+                fillOpacity: 0.05 
               }} 
             />
           </React.Fragment>
@@ -189,23 +197,32 @@ const MapComponent: React.FC<MapProps> = ({
         
         {markers?.map((marker) => {
           const isSellerMarker = marker.id.includes('seller') || marker.icon === 'brand' || marker.id === 'seller';
+          const isMeMarker = marker.id === 'me' || marker.id === 'selected';
+          
           const markerIcon = L.divIcon({
             className: 'custom-div-icon',
             html: `<div class="relative flex items-center justify-center">
-              ${isSellerMarker ? `
-                <div class="absolute -inset-2 bg-brand/20 rounded-full animate-pulse"></div>
-                <div class="w-10 h-10 rounded-full border-4 border-white shadow-[0_0_15px_rgba(255,184,0,0.4)] bg-brand flex items-center justify-center z-10 transition-transform scale-110">
-                   <div class="w-4 h-4 bg-dark rounded-[2px] rotate-45 flex items-center justify-center overflow-hidden">
-                      <div class="w-1 h-1 bg-white rounded-full"></div>
-                   </div>
+              ${isMeMarker ? `
+                <div class="absolute -inset-4 bg-blue-500/20 rounded-full animate-ping opacity-20"></div>
+                <div class="absolute -inset-2 bg-blue-500/10 rounded-full"></div>
+                <div class="w-6 h-6 rounded-full border-[3px] border-white shadow-xl bg-blue-500 flex items-center justify-center z-10">
+                   <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+                </div>
+              ` : isSellerMarker ? `
+                <div class="absolute -inset-2 bg-brand/30 rounded-full animate-pulse"></div>
+                <div class="w-10 h-10 rounded-full border-4 border-white shadow-xl bg-brand flex items-center justify-center z-10 transition-transform scale-110 overflow-hidden">
+                   ${marker.logoUrl ? 
+                     `<img src="${marker.logoUrl}" class="w-full h-full object-cover" />` : 
+                     `<div class="w-1.5 h-1.5 bg-white rounded-full"></div>`
+                   }
                 </div>
               ` : `
-                <div class="w-6 h-6 rounded-full border-3 border-white shadow-xl ${
+                <div class="w-6 h-6 rounded-full border-[3px] border-white shadow-lg ${
                   marker.icon === 'green' ? 'bg-green-500' : 
-                  marker.icon === 'yellow' ? 'bg-yellow-500' : 
+                  marker.icon === 'yellow' ? 'bg-amber-500' : 
                   'bg-brand'
                 } flex items-center justify-center">
-                   <div class="w-1.5 h-1.5 bg-white/50 rounded-full"></div>
+                   <div class="w-1.5 h-1.5 bg-white/80 rounded-full"></div>
                 </div>
               `}
             </div>`,

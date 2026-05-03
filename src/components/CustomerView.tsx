@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { db, auth } from '../firebase';
 import { collection, addDoc, query, where, onSnapshot, doc, updateDoc, runTransaction } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingCart, MapPin, Clock, Search, Minus, Plus, CreditCard, Coins, X, Loader2, Navigation, Signal, Zap, Gift, Info, Leaf, Sprout, ShieldCheck, Play, AlertCircle, Star } from 'lucide-react';
+import { ShoppingCart, MapPin, Clock, Search, Minus, Plus, CreditCard, Coins, X, Loader2, Navigation, Signal, Zap, Gift, Info, Leaf, Sprout, ShieldCheck, Play, AlertCircle, Star, List, Bell, User, CheckCircle2, UserX } from 'lucide-react';
 import { Order, UserProfile, VegetableItem, SellerProfile } from '../types';
 import { VEGETABLES } from '../constants';
 import MapContainer from './MapContainer';
@@ -18,7 +18,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{lat: number, lng: number, address: string} | null>(null);
   const [myOrders, setMyOrders] = useState<Order[]>([]);
-  const [activeTab, setActiveTab] = useState<'market' | 'orders'>('market');
+  const [activeTab, setActiveTab] = useState<'market' | 'orders' | 'inbox' | 'profile'>('market');
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [nearbySellers, setNearbySellers] = useState<SellerProfile[]>([]);
@@ -192,6 +192,8 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
 
   const totalAmount = cart.reduce((acc, item) => acc + (item.price * (item.quantity || 0)), 0);
 
+  const [selectedSellerProfile, setSelectedSellerProfile] = useState<SellerProfile | null>(null);
+
   const placeOrder = async () => {
     if (!selectedLocation) {
       setShowMapPicker(true);
@@ -224,142 +226,218 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
     v.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  useEffect(() => {
+    let watchId: number;
+    if ('geolocation' in navigator) {
+      watchId = navigator.geolocation.watchPosition((pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setUserCoords(coords);
+        if (!selectedLocation) {
+          setSelectedLocation({
+            ...coords,
+            address: `Live Radar Hub (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})`
+          });
+        }
+      }, (err) => console.error(err), { 
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 10000 
+      });
+    }
+    return () => {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+    };
+  }, []);
+
+  const sortedSellers = useMemo(() => {
+    return [...nearbySellers]
+      .filter(seller => {
+        if (!userCoords || !seller.currentLocation) return true; // Show all if location isn't available yet or seller has no location
+        const distance = Number(calculateDistance(userCoords.lat, userCoords.lng, seller.currentLocation.lat, seller.currentLocation.lng));
+        return distance <= 6;
+      })
+      .sort((a, b) => {
+        const aTier = a.membershipPlan === 'premium' ? 2 : a.membershipPlan === 'enterprise' ? 3 : 1;
+        const bTier = b.membershipPlan === 'premium' ? 2 : b.membershipPlan === 'enterprise' ? 3 : 1;
+        if (bTier !== aTier) return bTier - aTier;
+        
+        if (userCoords && a.currentLocation && b.currentLocation) {
+          const distA = Number(calculateDistance(userCoords.lat, userCoords.lng, a.currentLocation.lat, a.currentLocation.lng));
+          const distB = Number(calculateDistance(userCoords.lat, userCoords.lng, b.currentLocation.lat, b.currentLocation.lng));
+          return distA - distB;
+        }
+        return 0;
+      });
+  }, [nearbySellers, userCoords]);
+
   return (
-    <div className="min-h-screen bg-dark text-white pb-32 overflow-x-hidden relative">
-      <div className="fixed inset-0 pointer-events-none overflow-hidden opacity-5 z-0">
-         <Sprout className="absolute h-64 w-64 -top-20 -left-20 text-brand rotate-12" />
-         <Leaf className="absolute h-48 w-48 top-1/2 -right-10 text-brand -rotate-45" />
-         <Sprout className="absolute h-96 w-96 -bottom-32 left-1/3 text-brand opacity-10" />
+    <div className="min-h-screen bg-[#F4F7F5] text-dark pb-24 overflow-x-hidden relative font-sans">
+      {/* Top Header */}
+      <div className="bg-white px-6 py-6 border-b border-gray-100 flex justify-between items-center sticky top-0 z-40">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center text-white">
+            <Sprout className="w-6 h-6" />
+          </div>
+          <h1 className="text-2xl font-display font-black text-brand tracking-tighter uppercase leading-none">VegieRoute</h1>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2 bg-brand/10 px-3 py-1.5 rounded-full">
+            <Zap className="w-3 h-3 text-brand fill-brand" />
+            <span className="text-[10px] font-black text-brand tabular-nums">{user.superCoins || 0}</span>
+          </div>
+          <button 
+            onClick={() => auth.signOut()}
+            className="w-10 h-10 flex items-center justify-center bg-gray-50 border border-gray-100 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all shadow-sm"
+            title="Sign Out"
+          >
+            <UserX className="w-5 h-5" />
+          </button>
+          <button 
+            onClick={() => setShowCart(true)} 
+            className="w-10 h-10 flex items-center justify-center bg-gray-100 border border-gray-200 rounded-xl relative shadow-sm"
+          >
+            <ShoppingCart className="w-5 h-5 text-gray-400" />
+            {cart.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-brand text-white text-[8px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
+                {cart.reduce((a, b) => a + (b.quantity || 0), 0)}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 relative z-10">
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-16 sm:mb-24 px-2 sm:px-4 gap-8 sm:gap-12 mt-8 sm:mt-20">
-          <div className="space-y-4 sm:space-y-8">
-            <div className="glass-pill w-fit tracking-widest text-brand border-brand/20 text-[10px] sm:text-xs">Authorized Consumer Node</div>
-            <h1 className="text-5xl sm:text-7xl lg:text-9xl tracking-tighter uppercase font-black leading-[0.8] sm:leading-[0.8]">Market<br/><span className="text-neutral-800">Supply</span></h1>
-            <p className="text-neutral-500 font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] flex flex-wrap items-center gap-3 sm:gap-4 text-[9px] sm:text-[10px]">
-              <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-brand" /> 
-              Coordinate: {selectedLocation?.address || "Undefined Region"}
-              <button onClick={() => setShowMapPicker(true)} className="text-white hover:text-brand transition-colors decoration-brand/30 underline underline-offset-8 decoration-2 border-l border-line pl-3 sm:pl-4">Relocate Signal</button>
-            </p>
-          </div>
-          <div className="flex items-center gap-4 sm:gap-8">
-            <div className="hidden sm:flex flex-col items-end gap-2">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-brand rounded-full animate-ping" />
-                <span className="text-[10px] font-black uppercase text-brand tracking-widest">{nearbySellers.length} Sellers Live</span>
-              </div>
-              <p className="text-[8px] text-neutral-600 font-bold uppercase tracking-widest uppercase">Radar Active</p>
-            </div>
-            <div className="bg-surface border border-line px-6 py-5 sm:px-10 sm:py-8 rounded-[24px] sm:rounded-[40px] flex items-center gap-4 sm:gap-6 shadow-2xl relative overflow-hidden group flex-1 sm:flex-none justify-center">
-              <div className="absolute inset-0 bg-brand/5 -translate-x-full group-hover:translate-x-0 transition-transform duration-700" />
-              <div className="w-10 h-10 sm:w-14 sm:h-14 bg-brand/10 flex items-center justify-center rounded-xl sm:rounded-2xl relative z-10">
-                <Zap className="w-5 h-5 sm:w-7 sm:h-7 text-brand animate-pulse" />
-              </div>
-              <div className="relative z-10">
-                <p className="text-[8px] sm:text-[10px] font-black uppercase text-neutral-600 tracking-[0.2em] mb-1 sm:mb-2 leading-none">Super Coins Earned</p>
-                <p className="text-2xl sm:text-4xl font-black tabular-nums leading-none tracking-tighter text-brand">{user.superCoins || 0}</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => setShowCart(true)} 
-              className="relative w-20 h-20 sm:w-28 sm:h-28 flex items-center justify-center bg-brand text-dark rounded-[24px] sm:rounded-[40px] shadow-[0_20px_40px_-10px_rgba(255,184,0,0.5)] hover:scale-105 active:scale-95 transition-all group"
-            >
-              <ShoppingCart className="w-8 h-8 sm:w-12 sm:h-12 group-hover:rotate-12 transition-transform" />
-              {cart.length > 0 && (
-                <span className="absolute -top-2 -right-2 sm:-top-4 sm:-right-4 bg-white text-dark text-[10px] sm:text-xs w-7 h-7 sm:w-10 sm:h-10 flex items-center justify-center rounded-full border-2 sm:border-4 border-dark font-black shadow-2xl">
-                  {cart.reduce((a, b) => a + (b.quantity || 0), 0)}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-
-        <div className="flex gap-8 sm:gap-12 mb-12 sm:mb-16 border-b border-line px-2 sm:px-4 overflow-x-auto custom-scrollbar whitespace-nowrap scrollbar-hide">
-          {[
-            { id: 'market', label: 'Fresh Market' },
-            { id: 'orders', label: 'Active Pipeline' },
-          ].map((tab) => (
-            <button 
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={cn(
-                "font-display font-black uppercase text-[10px] sm:text-xs tracking-[0.2em] sm:tracking-[0.3em] transition-all relative pb-4 sm:pb-6",
-                activeTab === tab.id ? "text-brand" : "text-neutral-600 hover:text-neutral-400"
-              )}
-            >
-              {tab.label}
-              {activeTab === tab.id && <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-1 sm:h-1.5 bg-brand rounded-full" />}
-            </button>
-          ))}
-        </div>
-
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 mb-8">
         {activeTab === 'market' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 sm:space-y-12">
-            <div className="px-2 sm:px-4">
-              <div className="premium-card p-8 sm:p-12 bg-gradient-to-br from-brand/10 to-surface-hover border-brand/30 overflow-hidden relative group">
-                <div className="absolute top-0 right-0 p-8 sm:p-12 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <Gift className="w-32 h-32 sm:w-48 sm:h-48 text-brand rotate-12" />
+          <div className="space-y-8">
+            {/* Search & Location */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-[11px] font-bold text-gray-400 px-1">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-3.5 h-3.5 text-brand" />
+                  <span className="line-clamp-1 truncate max-w-[200px]">{selectedLocation?.address || "Locating..."}</span>
                 </div>
-                <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-                  <div className="space-y-4 sm:space-y-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-brand rounded-xl flex items-center justify-center">
-                        <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-dark fill-current" />
+                <button onClick={() => setShowMapPicker(true)} className="text-brand uppercase tracking-wider">Change</button>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300 w-5 h-5" />
+                <input 
+                  type="text" 
+                  placeholder="Search for retailers or products..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-white border border-gray-100 rounded-2xl px-14 py-4 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all shadow-sm"
+                />
+              </div>
+            </div>
+
+            {/* Loyalty Banner - Enhanced Premium Design (Compact) */}
+            <div className="relative overflow-hidden group">
+              {/* Background Glows */}
+              <div className="absolute -top-12 -left-12 w-48 h-48 bg-brand/10 rounded-full blur-[60px] animate-pulse" />
+              <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-brand/5 rounded-full blur-[60px]" />
+              
+              <div className="relative bg-[#0A0F0B] rounded-[32px] p-6 sm:p-8 border border-white/10 shadow-2xl overflow-hidden">
+                {/* Decorative Elements */}
+                <div className="absolute top-0 right-0 p-4 opacity-[0.05] group-hover:opacity-[0.1] group-hover:scale-110 group-hover:rotate-6 transition-all duration-1000 pointer-events-none">
+                  <Gift className="w-48 h-48 text-white rotate-12" />
+                </div>
+                
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                  <div className="space-y-6 flex-1">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-brand/10 rounded-md border border-brand/20">
+                          <Zap className="w-2.5 h-2.5 text-brand fill-brand" />
+                          <span className="text-brand text-[8px] font-black uppercase tracking-[0.2em]">Loyalty Node</span>
+                        </div>
+                        <span className="text-gray-500 text-[8px] font-black uppercase tracking-[0.2em]">Sector Rewards Active</span>
                       </div>
-                      <h3 className="text-2xl sm:text-4xl font-black uppercase tracking-tighter">Super Coin Hub</h3>
+                      <h3 className="text-3xl sm:text-4xl font-display font-black text-white uppercase tracking-tighter leading-none">
+                        Super <span className="text-brand">Coin</span> Reward
+                      </h3>
                     </div>
-                    <p className="text-neutral-500 font-bold uppercase tracking-widest text-[10px] sm:text-xs max-w-md leading-relaxed">
-                      Earn 1-3 Super Coins on every delivery. Reach 100 to unlock a <span className="text-brand">FREE VEGETABLE</span> on Saturdays and Sundays.
+                    
+                    <p className="text-gray-400 text-[10px] font-medium max-w-sm leading-relaxed uppercase tracking-widest opacity-80">
+                      Get a <span className="text-white font-black">FREE VEGETABLE</span> reward every weekend at the 100 coin threshold!
                     </p>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-end">
-                        <span className="text-[10px] font-black uppercase text-neutral-600 tracking-widest leading-none">Redemption Progress</span>
-                        <span className="text-lg font-black text-white tabular-nums leading-none">{superCoins}/100</span>
+
+                    <div className="space-y-3 max-w-xs">
+                      <div className="flex justify-between items-end px-0.5">
+                        <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Progress</span>
+                        <span className="text-xl font-black text-white tabular-nums tracking-tighter">
+                          {superCoins}<span className="text-gray-600 text-xs ml-1">/ 100</span>
+                        </span>
                       </div>
-                      <div className="h-2 bg-line rounded-full overflow-hidden">
+                      <div className="relative h-4 bg-white/5 rounded-full overflow-hidden border border-white/5 p-1">
                         <motion.div 
                           initial={{ width: 0 }}
                           animate={{ width: `${Math.min(superCoins, 100)}%` }}
-                          className="h-full bg-brand shadow-[0_0_10px_#FFB800]"
-                        />
+                          transition={{ duration: 1.5, ease: "circOut" }}
+                          className="h-full bg-brand rounded-full relative overflow-hidden"
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent w-full h-full animate-[shimmer_2s_infinite]" />
+                        </motion.div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-end gap-6">
-                    <div className="text-center sm:text-right hidden sm:block">
-                      <p className="text-[10px] font-black text-neutral-600 uppercase tracking-widest mb-1">Status</p>
-                      <div className="flex items-center gap-2 justify-end">
-                        <div className={cn("w-2 h-2 rounded-full", isWeekend ? "bg-green-500 animate-pulse" : "bg-neutral-800")} />
-                        <span className="text-xs font-bold text-white uppercase">{isWeekend ? 'WEEKEND ACTIVE' : 'AWAITING WEEKEND'}</span>
-                      </div>
-                    </div>
+
+                  <div className="flex flex-col gap-3 min-w-[200px]">
                     <button 
-                      onClick={claimWeekendReward}
+                      onClick={() => {
+                        if (canRedeem) {
+                          claimWeekendReward();
+                        } else {
+                          // Scroll to search or retailers to "Earn More"
+                          document.getElementById('nearby-retailers')?.scrollIntoView({ behavior: 'smooth' });
+                        }
+                      }}
                       disabled={claiming}
                       className={cn(
-                        "px-10 h-20 sm:h-24 rounded-[28px] font-black uppercase tracking-[0.2em] text-xs sm:text-sm transition-all flex items-center justify-center gap-3",
+                        "relative group/btn overflow-hidden px-8 py-4 rounded-2xl font-black uppercase tracking-[0.2em] transition-all text-[10px]",
                         canRedeem 
-                          ? "bg-brand text-dark shadow-[0_15px_30px_-5px_rgba(255,184,0,0.4)] hover:scale-105 active:scale-95" 
-                          : "bg-surface text-neutral-700 border border-line cursor-not-allowed"
+                          ? "bg-brand text-white shadow-lg shadow-brand/20 hover:scale-[1.02] active:scale-98" 
+                          : "bg-white text-dark hover:bg-gray-100 shadow-xl"
                       )}
                     >
-                      {claiming ? <Loader2 className="w-5 h-5 animate-spin" /> : <Gift className="w-5 h-5 sm:w-6 sm:h-6" />}
-                      {canRedeem ? "Claim Free Veggie" : "Locked"}
+                      <div className="absolute inset-0 bg-white/20 transform -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000" />
+                      <span className="relative flex items-center justify-center gap-2">
+                        {claiming ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : canRedeem ? (
+                          <>
+                            <Gift className="w-4 h-4 fill-white" />
+                            Redeem Reward
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-3.5 h-3.5 fill-dark" />
+                            Earn More Coins
+                          </>
+                        )}
+                      </span>
                     </button>
-                    {!canRedeem && superCoins >= 100 && !isWeekend && (
-                      <div className="absolute -bottom-1 lg:bottom-4 px-4 py-2 bg-brand/10 border border-brand/20 rounded-full flex items-center gap-2">
-                        <Info className="w-3 h-3 text-brand" />
-                        <span className="text-[8px] font-black text-brand uppercase tracking-widest">Wait until Saturday to redeem your coins!</span>
-                      </div>
-                    )}
+                    
+                    {!isWeekend && superCoins >= 100 ? (
+                      <p className="text-[8px] font-black text-gray-500 text-center uppercase tracking-widest">
+                        Unlocks this Weekend
+                      </p>
+                    ) : superCoins < 100 ? (
+                      <p className="text-[8px] font-black text-brand/60 text-center uppercase tracking-widest">
+                        {100 - superCoins} coins to protocol unlock
+                      </p>
+                    ) : null}
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="px-2 sm:px-4">
-              <div className="premium-card p-0 h-[400px] sm:h-[500px] overflow-hidden relative shadow-2xl border-brand/10 group">
+            {/* Map Preview */}
+            <div className="space-y-4" id="nearby-retailers">
+              <div className="flex justify-between items-center px-1">
+                <h3 className="text-lg font-black uppercase tracking-tighter">Nearby Retailers</h3>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{sortedSellers.length} ONLINE NOW</span>
+              </div>
+              <div className="premium-card h-48 sm:h-64 relative group">
                 <MapContainer 
                   markers={[
                     ...(selectedLocation ? [{ 
@@ -369,190 +447,322 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
                       label: 'ME',
                       description: selectedLocation.address
                     }] : []),
-                    ...nearbySellers.filter(s => s.currentLocation).map(s => {
-                      const dist = userCoords ? calculateDistance(userCoords.lat, userCoords.lng, s.currentLocation!.lat, s.currentLocation!.lng) : null;
-                      return {
-                        id: s.id,
-                        lat: s.currentLocation!.lat,
-                        lng: s.currentLocation!.lng,
-                        label: `SELLER: ${s.fullName}`,
-                        description: `${s.averageRating ? `Rating: ${s.averageRating.toFixed(1)} ⭐ | ` : ''}${dist ? `${dist}km away - Mobile Unit` : 'Mobile Supply Unit Active'}`,
-                        icon: 'brand'
-                      };
-                    })
+                    ...sortedSellers.filter(s => s.currentLocation).map(s => ({
+                      id: s.id,
+                      lat: s.currentLocation!.lat,
+                      lng: s.currentLocation!.lng,
+                      label: s.businessDetails?.shopName || s.fullName,
+                      description: s.businessDetails?.bio || 'Active Retailer',
+                      icon: 'brand',
+                      logoUrl: s.businessDetails?.logoUrl
+                    }))
                   ]}
-                  zoom={15}
+                  zoom={14}
                   centerPos={userCoords || selectedLocation || undefined}
-                  onMapClick={(lat, lng) => {
-                    setSelectedLocation({ 
-                      lat, 
-                      lng, 
-                      address: `Coordinate (${lat.toFixed(4)}, ${lng.toFixed(4)})` 
-                    });
-                  }}
                 />
-                <div className="absolute inset-0 pointer-events-none p-4 flex flex-col justify-between">
-                  <div className="flex flex-col gap-1.5 items-start">
-                    <motion.div 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="bg-dark/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-line shadow-xl flex items-center gap-2"
-                    >
-                      <div className="w-1 h-1 bg-brand rounded-full animate-pulse" />
-                      <span className="text-[10px] font-black text-white uppercase tracking-widest leading-none">
-                        {nearbySellers.length} Units Online
-                      </span>
-                    </motion.div>
-                  </div>
-                  <div className="flex items-end justify-between gap-4">
-                    <motion.button 
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => {
-                        if (!selectedLocation) {
-                          setShowMapPicker(true);
-                          return;
-                        }
-                        addDoc(collection(db, 'orders'), {
-                          customerId: user.id || auth.currentUser?.uid,
-                          items: [{ id: 'signal', name: 'DEMAND SIGNAL', quantity: 1, price: 0, unit: 'signal' }],
-                          totalAmount: 0,
-                          status: 'pending',
-                          location: selectedLocation,
-                          createdAt: new Date().toISOString(),
-                          type: 'signal'
-                        }).then(() => alert("Signal Broadcasted. Operators notified."))
-                          .catch(e => handleFirestoreError(e, OperationType.CREATE, 'orders', auth));
-                      }}
-                      className="px-6 py-4 bg-brand text-dark rounded-xl font-black uppercase tracking-widest text-[10px] shadow-2xl pointer-events-auto flex items-center gap-2"
-                    >
-                      <Signal className="w-4 h-4" />
-                      Broadcast Signal
-                    </motion.button>
-                    <div className="flex flex-col gap-2">
-                      <button 
-                        onClick={() => useCurrentLocation()}
-                        className="w-10 h-10 bg-white text-dark rounded-lg flex items-center justify-center shadow-xl pointer-events-auto hover:bg-brand transition-colors"
-                        title="Sync GPS"
-                      >
-                        <Navigation className="w-4 h-4 fill-current" />
-                      </button>
-                      <button 
-                        onClick={() => setShowMapPicker(true)}
-                        className="w-10 h-10 bg-dark/90 text-white rounded-lg flex items-center justify-center shadow-xl border border-line pointer-events-auto hover:bg-brand hover:text-dark transition-colors"
-                        title="Set Target"
-                      >
-                        <MapPin className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <button 
+                  onClick={() => setShowMapPicker(true)}
+                  className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-gray-100 shadow-xl"
+                >
+                  Full Radar
+                </button>
               </div>
             </div>
 
-            <div className="relative px-2 sm:px-4">
-              <Search className="absolute left-6 sm:left-10 top-1/2 -translate-y-1/2 text-neutral-600 w-5 h-5 sm:w-6 sm:h-6" />
-              <input 
-                type="text" 
-                placeholder="Search logistics payload..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="input-premium pl-16 sm:pl-20 py-4 sm:py-6 text-sm sm:text-base"
-              />
+            {/* Vegetable Retailers */}
+            <div className="space-y-4">
+               <div className="flex justify-between items-center px-1">
+                 <h3 className="text-lg font-black uppercase tracking-tighter">Vegetable Retailers</h3>
+                 <button className="text-brand text-[10px] font-bold uppercase">See All</button>
+               </div>
+                 <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide px-1">
+                 {sortedSellers.map(seller => (
+                    <div 
+                      key={seller.id} 
+                      className={cn(
+                        "min-w-[200px] premium-card p-4 space-y-3 cursor-pointer hover:border-brand/40 transition-all group relative",
+                        seller.membershipPlan === 'premium' && "border-brand/30 bg-brand/5 shadow-brand/5",
+                        seller.membershipPlan === 'enterprise' && "border-brand bg-brand shadow-brand/10"
+                      )}
+                      onClick={() => setSelectedSellerProfile(seller)}
+                    >
+                      {seller.membershipPlan && seller.membershipPlan !== 'standard' && (
+                        <div className="absolute -top-2 -right-2 bg-brand text-white text-[7px] font-black px-2 py-1 rounded-lg shadow-xl shadow-brand/20 z-10 flex items-center gap-1 uppercase tracking-widest border border-white/20">
+                          <Zap className="w-2 h-2 fill-white" />
+                          {seller.membershipPlan}
+                        </div>
+                      )}
+                      <div className="w-full aspect-video bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden relative">
+                         {seller.businessDetails?.logoUrl ? (
+                           <img src={seller.businessDetails.logoUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform" alt="Store Logo" />
+                         ) : (
+                           <div className="flex flex-col items-center gap-1">
+                             <Sprout className="w-8 h-8 text-brand/20" />
+                             <span className="text-[7px] font-black text-gray-300 uppercase">No Logo</span>
+                           </div>
+                         )}
+                         <div className="absolute top-2 right-2 bg-white/90 px-1.5 py-0.5 rounded-lg flex items-center gap-1">
+                           <Star className="w-2.5 h-2.5 text-brand fill-brand" />
+                           <span className="text-[9px] font-black">{seller.averageRating?.toFixed(1) || "5.0"}</span>
+                         </div>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-gray-800 line-clamp-1">{seller.businessDetails?.shopName || seller.fullName}</h4>
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-[9px] font-bold text-gray-500 uppercase flex items-center gap-1">
+                            <Clock className="w-2 h-2" />
+                            {seller.businessDetails?.operatingHours || "Online"}
+                            {seller.currentLocation?.updatedAt && (Date.now() - new Date(seller.currentLocation.updatedAt).getTime() < 30000) && (
+                              <span className="flex items-center gap-1 ml-2">
+                                <span className="w-1 h-1 bg-brand rounded-full animate-pulse" />
+                                <span className="text-brand text-[7px] font-black">TRACKING LIVE</span>
+                              </span>
+                            )}
+                          </p>
+                          {userCoords && seller.currentLocation && (
+                            <span className="text-[8px] font-black text-brand bg-brand/10 px-1.5 py-0.5 rounded-md">
+                              {calculateDistance(userCoords.lat, userCoords.lng, seller.currentLocation.lat, seller.currentLocation.lng)}km
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                 ))}
+                 {sortedSellers.length === 0 && (
+                   <p className="text-gray-400 text-[10px] font-bold uppercase py-6 px-4">No active retailers found in your sector</p>
+                 )}
+               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-8 px-2 sm:px-4">
-              {filteredVegetables.map((item) => (
-                <motion.div 
-                  key={item.id}
-                  whileHover={{ y: -8 }}
-                  className="premium-card p-4 sm:p-8 flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-4 sm:gap-8">
-                    <div className="w-16 h-16 sm:w-24 sm:h-24 bg-surface-hover rounded-2xl sm:rounded-[32px] flex items-center justify-center text-3xl sm:text-5xl border border-line shadow-inner">
-                      {item.name === 'Tomato' && '🍅'}
-                      {item.name === 'Potato' && '🥔'}
-                      {item.name === 'Onion' && '🧅'}
-                      {item.name === 'Spinach' && '🥬'}
-                      {item.name === 'Carrot' && '🥕'}
-                      {item.name === 'Cauliflower' && '🥦'}
-                      {item.name === 'Cabbage' && '🥬'}
-                      {item.name === 'Lady Finger' && '🥒'}
-                    </div>
-                    <div>
-                      <h3 className="text-xl sm:text-2xl font-black mb-1 tracking-tighter uppercase leading-none">{item.name}</h3>
-                      <p className="text-brand font-bold text-base sm:text-lg leading-none mt-2">₹{item.price}<span className="text-neutral-500 text-xs sm:text-sm ml-1 font-medium italic lowercase">/ {item.unit}</span></p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => addToCart(item)}
-                    className="w-12 h-12 sm:w-16 sm:h-16 bg-line hover:bg-brand text-white hover:text-dark rounded-full flex items-center justify-center transition-all active:scale-90"
-                  >
-                    <Plus className="w-6 h-6 sm:w-8 sm:h-8" />
-                  </button>
-                </motion.div>
-              ))}
+            {/* Products Grid */}
+            <div className="space-y-4">
+               <div className="flex justify-between items-center px-1">
+                 <h3 className="text-lg font-black uppercase tracking-tighter">Available Produce</h3>
+                 <button className="text-brand text-[10px] font-bold uppercase">Filter</button>
+               </div>
+               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 px-1">
+                 {filteredVegetables.map(item => (
+                   <div key={item.id} className="premium-card p-3 space-y-3 flex flex-col group">
+                     {/* Asset Placeholder */}
+                     <div className="w-full aspect-square bg-gray-50 rounded-2xl flex items-center justify-center text-5xl border border-gray-100 group-hover:scale-105 transition-transform">
+                        {item.name === 'Tomato' && '🍅'}
+                        {item.name === 'Potato' && '🥔'}
+                        {item.name === 'Onion' && '🧅'}
+                        {item.name === 'Spinach' && '🥬'}
+                        {item.name === 'Carrot' && '🥕'}
+                        {item.name === 'Cauliflower' && '🥦'}
+                        {item.name === 'Cabbage' && '🥬'}
+                        {item.name === 'Lady Finger' && '🥒'}
+                     </div>
+                     <div className="flex-1 space-y-1">
+                       <h4 className="text-[13px] font-black text-gray-800 uppercase tracking-tighter leading-none">{item.name}</h4>
+                       <p className="text-[10px] font-bold text-brand uppercase">₹{item.price}<span className="text-gray-400 font-medium ml-1">/ {item.unit}</span></p>
+                     </div>
+                     <button 
+                       onClick={() => addToCart(item)}
+                       className="w-full bg-gray-50 hover:bg-brand hover:text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                     >
+                       Add to Bag
+                     </button>
+                   </div>
+                 ))}
+               </div>
             </div>
-          </motion.div>
+          </div>
         )}
 
         {activeTab === 'orders' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 sm:space-y-8 px-2 sm:px-4">
+          <div className="space-y-6">
+            <h2 className="text-3xl font-black uppercase tracking-tighter px-1">Track Pipeline</h2>
             {myOrders.length === 0 ? (
-              <div className="text-center py-24 sm:py-32 premium-card">
-                <Clock className="w-16 h-16 sm:w-20 sm:h-20 text-neutral-800 mx-auto mb-6 sm:mb-8" />
-                <p className="text-neutral-500 font-bold uppercase tracking-widest text-xs sm:text-base">No Active Logistics Found</p>
+              <div className="premium-card p-12 text-center space-y-6">
+                <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                   <Clock className="w-10 h-10 text-gray-300" />
+                </div>
+                <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">No active orders found</p>
               </div>
             ) : (
-              myOrders.map((order) => (
-                <div key={order.id} className="premium-card p-6 sm:p-10 group relative">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-10 gap-4 sm:gap-6">
-                    <div className="space-y-2 sm:space-y-3">
-                       <span className={cn(
-                        "px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] border shadow-sm",
-                        order.status === 'pending' ? "bg-white/5 text-white border-white/10" :
-                        order.status === 'accepted' ? "bg-brand/10 text-brand border-brand/20" :
-                        order.status === 'delivered' ? "bg-brand text-dark border-brand" : "bg-neutral-900 text-neutral-500 border-line"
-                      )}>
-                        {order.status}
-                      </span>
-                      <p className="text-[10px] sm:text-xs text-neutral-600 font-bold uppercase tracking-widest">Protocol ID: {order.id.split('-')[0].toUpperCase()}</p>
-                    </div>
-                    <p className="text-2xl sm:text-4xl font-black tracking-tighter tabular-nums">{formatCurrency(order.totalAmount)}</p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-line">
-                     <div className="space-y-1 sm:space-y-2">
-                       <p className="text-[8px] sm:text-[10px] font-black text-neutral-600 uppercase tracking-widest leading-none">Payload Items</p>
-                       <p className="text-base sm:text-lg font-bold text-neutral-300 leading-none">
-                          {order.items.map(i => `${i.name} (x${i.quantity})`).join(', ')}
-                       </p>
+              myOrders.map(order => (
+                <div key={order.id} className="premium-card p-6 space-y-6">
+                   <div className="flex justify-between items-start">
+                     <div className="space-y-1">
+                        <span className={cn(
+                          "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
+                          order.status === 'delivered' ? "bg-brand text-white border-brand shadow-md" : "bg-gray-100 text-gray-500 border-gray-200"
+                        )}>
+                          {order.status}
+                        </span>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase mt-2">ID: {order.id.slice(-6).toUpperCase()}</p>
                      </div>
-                     <div className="space-y-1 sm:space-y-2">
-                       <p className="text-[8px] sm:text-[10px] font-black text-neutral-600 uppercase tracking-widest leading-none">Logistics Destination</p>
-                       <p className="flex items-center gap-2 text-base sm:text-lg font-bold text-neutral-300 leading-none">
-                         <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-brand" /> {order.location?.address}
-                       </p>
-                     </div>
-                  </div>
-                  {order.sellerId && order.status === 'delivered' && !order.rating && (
+                     <span className="text-xl font-black tabular-nums">{formatCurrency(order.totalAmount)}</span>
+                   </div>
+                   <div className="bg-gray-50/50 rounded-2xl p-4 space-y-3">
+                      <div className="flex justify-between text-[11px] font-bold">
+                        <span className="text-gray-400 uppercase tracking-widest">Items</span>
+                        <span className="text-gray-700">{order.items.map(i => `${i.name} (x${i.quantity})`).join(', ')}</span>
+                      </div>
+                      <div className="flex justify-between text-[11px] font-bold">
+                        <span className="text-gray-400 uppercase tracking-widest">Drop Location</span>
+                        <span className="text-gray-700 line-clamp-1">{order.location?.address}</span>
+                      </div>
+                   </div>
+                   {order.sellerId && order.status === 'delivered' && !order.rating && (
                      <OrderRatingAction order={order} />
-                  )}
-                  {order.sellerId && (
-                     <SellerInfoDisplay 
-                       sellerId={order.sellerId} 
-                       status={order.status} 
-                       orderLocation={order.location} 
-                       orderId={order.id} 
-                     />
-                  )}
-                  <button className="w-full py-3 sm:py-4 text-neutral-500 font-black uppercase text-[8px] sm:text-[10px] tracking-[0.3em] sm:tracking-[0.4em] hover:text-brand transition-colors">
-                    TRACK LIVE DATA
-                  </button>
+                   )}
+                   {order.sellerId && <SellerInfoDisplay  sellerId={order.sellerId} status={order.status} orderLocation={order.location} orderId={order.id} />}
                 </div>
               ))
             )}
-          </motion.div>
+          </div>
         )}
+
+        {activeTab === 'inbox' && (
+          <div className="space-y-6">
+            <h2 className="text-3xl font-black uppercase tracking-tighter px-1">Alert Signals</h2>
+            <div className="space-y-4">
+              {myOrders.filter(o => o.status !== 'delivered').length > 0 ? (
+                myOrders.filter(o => o.status !== 'delivered').map(order => (
+                  <div key={`alert-${order.id}`} className="premium-card p-6 border-l-4 border-brand flex items-center gap-4">
+                    <div className="w-12 h-12 bg-brand/10 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Bell className="w-6 h-6 text-brand" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[10px] font-black text-brand uppercase tracking-widest mb-1">Order Update</p>
+                      <h4 className="text-sm font-black text-gray-800 uppercase tracking-tight">
+                        Order #{order.id.slice(-6).toUpperCase()} is currently <span className="text-brand">{order.status}</span>
+                      </h4>
+                      <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase">Track in orders for real-time ETA</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="premium-card p-12 text-center space-y-6">
+                  <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                    <Signal className="w-10 h-10 text-gray-200" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-gray-800 font-black uppercase tracking-tight">Quiet Sector</p>
+                    <p className="text-gray-400 font-bold uppercase tracking-widest text-[9px]">No active signals or alerts found</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* System Alert Placeholder */}
+              <div className="premium-card p-6 border-l-4 border-blue-500 bg-blue-50/30 flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Info className="w-6 h-6 text-blue-500" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">System Notice</p>
+                  <h4 className="text-sm font-black text-gray-800 uppercase tracking-tight">Market Protocol v1.4 Active</h4>
+                  <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase">Enhanced real-time tracking enabled in your sector.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'profile' && (
+          <div className="space-y-8">
+            <h2 className="text-3xl font-black uppercase tracking-tighter px-1">Control Hub</h2>
+            
+            <div className="premium-card p-8 bg-white flex flex-col items-center gap-6">
+              <div className="w-24 h-24 bg-brand/10 rounded-[32px] flex items-center justify-center relative">
+                <User className="w-12 h-12 text-brand" />
+                <div className="absolute -bottom-2 -right-2 bg-brand text-white p-2 rounded-xl shadow-lg">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="text-center space-y-1">
+                <h3 className="text-2xl font-black uppercase tracking-tighter text-gray-800">{user.fullName}</h3>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">{user.email}</p>
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <span className="bg-brand/10 text-brand px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">Verified Buyer</span>
+                  <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">Sector A-12</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="premium-card p-6 flex flex-col gap-4 bg-brand group hover:scale-[1.02] transition-transform cursor-pointer">
+                <Zap className="w-8 h-8 text-white fill-white" />
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">Super Coins</p>
+                  <p className="text-3xl font-black text-white tabular-nums">{user.superCoins || 0}</p>
+                </div>
+              </div>
+              <div className="premium-card p-6 flex flex-col gap-4 bg-gray-800 group hover:scale-[1.02] transition-transform cursor-pointer">
+                <ShoppingCart className="w-8 h-8 text-white" />
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">Total Orders</p>
+                  <p className="text-3xl font-black text-white tabular-nums">{myOrders.length}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Settings & Security</p>
+               <div className="premium-card overflow-hidden bg-white border border-gray-100">
+                  <button className="w-full p-5 flex items-center justify-between hover:bg-gray-50 transition-colors border-b border-gray-50">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400"><MapPin className="w-5 h-5" /></div>
+                      <span className="text-[11px] font-black uppercase tracking-widest text-gray-700">Saved Logistics Points</span>
+                    </div>
+                  </button>
+                  <button className="w-full p-5 flex items-center justify-between hover:bg-gray-50 transition-colors border-b border-gray-50">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400"><CreditCard className="w-5 h-5" /></div>
+                      <span className="text-[11px] font-black uppercase tracking-widest text-gray-700">Payment Methods</span>
+                    </div>
+                  </button>
+                  <button className="w-full p-5 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400"><ShieldCheck className="w-5 h-5" /></div>
+                      <span className="text-[11px] font-black uppercase tracking-widest text-gray-700">Privacy Protocols</span>
+                    </div>
+                  </button>
+               </div>
+            </div>
+
+            <button 
+              onClick={() => auth.signOut()}
+              className="w-full py-5 bg-red-50 text-red-500 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 border border-red-100 hover:bg-red-100 transition-all"
+            >
+              <UserX className="w-5 h-5" />
+              Terminate Session
+            </button>
+          </div>
+        )}
+
+      </div>
+
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 z-[100] px-6 pb-6 pointer-events-none">
+        <div className="max-w-md mx-auto h-[72px] bg-white border border-gray-100 rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex items-center justify-around pointer-events-auto overflow-hidden relative px-4">
+           {[
+             { id: 'market', icon: Sprout, label: 'Market' },
+             { id: 'orders', icon: List, label: 'Orders' },
+             { id: 'inbox', icon: Bell, label: 'Alerts' },
+             { id: 'profile', icon: User, label: 'Hub' }
+           ].map((tab) => {
+             const Icon = tab.icon;
+             return (
+               <button 
+                 key={tab.id}
+                 onClick={() => setActiveTab(tab.id as any)}
+                 className={cn(
+                   "flex flex-col items-center justify-center gap-1 transition-all group",
+                   activeTab === tab.id ? "text-brand" : "text-gray-300 hover:text-gray-500"
+                 )}
+               >
+                 <Icon className={cn("w-5 h-5 transition-transform group-active:scale-90", activeTab === tab.id ? "fill-brand/10" : "")} />
+                 <span className="text-[8px] font-black uppercase tracking-widest">{tab.label}</span>
+                 {activeTab === tab.id && <motion.div layoutId="nav-pill" className="absolute -bottom-1 w-6 h-1 bg-brand rounded-full" />}
+               </button>
+             );
+           })}
+        </div>
+      </div>
 
         <AnimatePresence>
           {showCart && (
@@ -570,7 +780,10 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
                 <div className="p-6 sm:p-12 pb-6 sm:pb-8 flex flex-col gap-3 sm:gap-4 border-b border-line">
                   <div className="flex justify-between items-center">
                     <h3 className="text-2xl sm:text-4xl tracking-tighter uppercase font-black leading-none">Bag Overflow</h3>
-                    <button onClick={() => setShowCart(false)} className="w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center bg-line rounded-full hover:bg-brand hover:text-dark transition-all">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setShowCart(false); }} 
+                      className="w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center bg-gray-100 rounded-full hover:bg-brand hover:text-white transition-all z-50 pointer-events-auto"
+                    >
                       <X className="w-5 h-5 sm:w-6 sm:h-6" />
                     </button>
                   </div>
@@ -600,21 +813,21 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
                   )}
                 </div>
                 {cart.length > 0 && (
-                  <div className="p-6 sm:p-12 pt-6 sm:pt-8 bg-dark border-t border-line space-y-6 sm:space-y-10 mb-[env(safe-area-inset-bottom)]">
+                  <div className="p-6 sm:p-12 pt-6 sm:pt-8 bg-white border-t border-gray-100 space-y-6 sm:space-y-10 mb-[env(safe-area-inset-bottom)]">
                     <div className="flex justify-between items-end">
                       <div className="space-y-1">
-                        <p className="text-neutral-600 font-black uppercase tracking-[0.2em] text-[8px] sm:text-[10px] leading-none">Logistics Total</p>
-                        <p className="text-brand font-bold text-[10px] sm:text-sm uppercase leading-none mt-1 sm:mt-2">Secure Billing Applied</p>
+                        <p className="text-gray-400 font-black uppercase tracking-[0.2em] text-[8px] sm:text-[10px] leading-none">Order Total</p>
+                        <p className="text-brand font-bold text-[10px] sm:text-sm uppercase leading-none mt-1 sm:mt-2">Safe P2P Payment</p>
                       </div>
-                      <span className="text-3xl sm:text-6xl font-black tracking-tighter tabular-nums leading-none text-white">{formatCurrency(totalAmount)}</span>
+                      <span className="text-3xl sm:text-6xl font-black tracking-tighter tabular-nums leading-none text-gray-800">{formatCurrency(totalAmount)}</span>
                     </div>
                     <button 
                       onClick={placeOrder}
                       disabled={loading}
-                      className="btn-brand w-full flex items-center justify-center gap-3 sm:gap-4 py-4 sm:py-6 text-xs sm:text-base font-black"
+                      className="w-full bg-brand text-white py-5 sm:py-7 rounded-[24px] flex items-center justify-center gap-3 sm:gap-4 text-sm sm:text-base font-black uppercase tracking-widest shadow-xl shadow-brand/20 hover:bg-brand/90 transition-all disabled:opacity-50"
                     >
                       {loading && <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" />}
-                      {loading ? "Authorizing..." : "Authorize Pipeline"}
+                      {loading ? "Processing..." : "Confirm Order"}
                     </button>
                   </div>
                 )}
@@ -635,49 +848,55 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
                 initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
                 className="relative w-full max-w-4xl h-[85vh] bg-dark rounded-[32px] sm:rounded-[48px] overflow-hidden border border-line flex flex-col shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)]"
               >
-                <div className="p-6 sm:p-10 border-b border-line flex justify-between items-center bg-dark">
+                <div className="p-6 sm:p-10 border-b border-gray-100 flex justify-between items-center bg-white">
                   <div className="space-y-1">
-                    <h3 className="text-2xl sm:text-3xl font-black tracking-tighter uppercase leading-none">Signal Drop</h3>
-                     <p className="text-[8px] sm:text-[10px] font-black uppercase text-neutral-600 tracking-widest leading-none mt-1 sm:mt-2">Pinpoint Delivery Coordinate</p>
+                    <h3 className="text-2xl sm:text-3xl font-black tracking-tighter uppercase leading-none">Drop-off Point</h3>
+                     <p className="text-[8px] sm:text-[10px] font-black uppercase text-gray-400 tracking-widest leading-none mt-1 sm:mt-2">Pinpoint your exact location</p>
                   </div>
-                  <button onClick={() => setShowMapPicker(false)} className="w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center bg-surface border border-line rounded-full"><X className="w-5 h-5 sm:w-6 sm:h-6" /></button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setShowMapPicker(false); }} 
+                    className="w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center bg-gray-50 border border-gray-100 rounded-full z-50 hover:bg-gray-100 transition-all pointer-events-auto"
+                  >
+                    <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                  </button>
                 </div>
-                <div className="flex-1 relative bg-neutral-900 overflow-hidden">
+                <div className="flex-1 relative bg-gray-50 overflow-hidden">
                   <MapContainer 
-                    onMapClick={(lat, lng) => setSelectedLocation({ lat, lng, address: `Coordinate (${lat.toFixed(4)}, ${lng.toFixed(4)})` })}
+                    onMapClick={(lat, lng) => setSelectedLocation({ lat, lng, address: `Sector Coordinate (${lat.toFixed(4)}, ${lng.toFixed(4)})` })}
                     markers={[
                       ...(selectedLocation ? [{ 
                         id: 'selected', 
                         ...selectedLocation, 
                         icon: 'green', 
-                        label: 'YOUR SIGNAL',
-                        description: 'Drop point confirmed'
+                        label: 'MY DROP POINT',
+                        description: 'Vegetable drop location'
                       }] : []),
-                      ...nearbySellers.filter(s => s.currentLocation).map(s => ({
-                        id: s.id,
-                        lat: s.currentLocation!.lat,
-                        lng: s.currentLocation!.lng,
-                        label: `MOBILE SELLER (${s.fullName})`,
-                        description: 'Operational in Sector',
-                        icon: 'brand'
-                      }))
-                    ]}
+                      ...sortedSellers.filter(s => s.currentLocation).map(s => ({
+                      id: s.id,
+                      lat: s.currentLocation!.lat,
+                      lng: s.currentLocation!.lng,
+                      label: s.businessDetails?.shopName || s.fullName,
+                      description: s.businessDetails?.bio || 'Active Retailer',
+                      icon: 'brand',
+                      logoUrl: s.businessDetails?.logoUrl
+                    }))
+                  ]}
                     zoom={15}
                   />
                 </div>
-                <div className="p-6 sm:p-12 bg-dark flex flex-col md:flex-row items-center gap-6 sm:gap-10 pb-8 sm:pb-12">
+                <div className="p-6 sm:p-12 bg-white flex flex-col md:flex-row items-center gap-6 sm:gap-10 pb-8 sm:pb-12 border-t border-gray-100">
                   <div className="flex-1 space-y-1 sm:space-y-2 text-center md:text-left">
-                    <p className="text-[8px] sm:text-[10px] font-black text-neutral-600 uppercase tracking-widest leading-none">Validated Address</p>
-                    <p className="text-xl sm:text-3xl font-black tracking-tight text-white line-clamp-1 leading-none mt-1 sm:mt-2 uppercase">
-                      {selectedLocation?.address || "Signal Required..."}
+                    <p className="text-[8px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Confirmed Location</p>
+                    <p className="text-xl sm:text-3xl font-black tracking-tight text-gray-800 line-clamp-1 leading-none mt-1 sm:mt-2 uppercase">
+                      {selectedLocation?.address || "Please select a point..."}
                     </p>
                   </div>
                   <button 
                     disabled={!selectedLocation}
                     onClick={() => setShowMapPicker(false)}
-                    className="btn-brand md:w-fit whitespace-nowrap w-full py-4 sm:py-6 text-sm"
+                    className="w-full md:w-auto bg-brand text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-brand/20 hover:scale-105 active:scale-95 transition-all"
                   >
-                    Confirm Coordinate
+                    Confirm Location
                   </button>
                 </div>
               </motion.div>
@@ -696,17 +915,17 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
                 initial={{ scale: 0.8, y: 50, opacity: 0 }}
                 animate={{ scale: 1, y: 0, opacity: 1 }}
                 exit={{ scale: 0.8, y: 50, opacity: 0 }}
-                className="relative w-full max-w-lg bg-surface border border-brand/30 rounded-[48px] p-8 sm:p-12 text-center shadow-[0_0_100px_rgba(255,184,0,0.2)] overflow-hidden"
+                className="relative w-full max-w-lg bg-white border border-gray-100 rounded-[48px] p-8 sm:p-12 text-center shadow-2xl overflow-hidden"
               >
                  <div className="absolute top-0 inset-x-0 h-1 bg-brand" />
                  <Gift className="w-16 h-16 sm:w-24 sm:h-24 text-brand mx-auto mb-8 animate-bounce" />
-                 <h2 className="text-4xl sm:text-6xl font-black uppercase tracking-tighter mb-4">Congratulation!</h2>
-                 <p className="text-neutral-500 font-bold uppercase tracking-widest text-[10px] sm:text-xs mb-10">Your delivery was completed successfully. Scratch below to reveal your Super Coins!</p>
-                 <div className="relative aspect-video w-full bg-dark rounded-[32px] border border-line overflow-hidden mb-10 group cursor-crosshair">
+                 <h2 className="text-4xl sm:text-6xl font-black uppercase tracking-tighter mb-4 text-brand">Success!</h2>
+                 <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px] sm:text-xs mb-10">Delivery complete. Scratch to see your coins!</p>
+                 <div className="relative aspect-video w-full bg-gray-50 rounded-[32px] border border-gray-100 overflow-hidden mb-10 group cursor-crosshair">
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                       <p className="text-[10px] font-black text-brand uppercase tracking-[0.3em] mb-2 leading-none">Neural Jackpot</p>
-                       <p className="text-7xl font-black text-white leading-none tracking-tighter">+{scratchReward.rewardAmount}</p>
-                       <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mt-2">Super Coins Added</p>
+                       <p className="text-[10px] font-black text-brand uppercase tracking-[0.3em] mb-2 leading-none">Bonus Reward</p>
+                       <p className="text-7xl font-black text-gray-800 leading-none tracking-tighter">+{scratchReward.rewardAmount}</p>
+                       <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-2">Coins Earned</p>
                     </div>
                     <motion.div 
                       drag
@@ -717,23 +936,12 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
                         setScratchProgress(progress);
                       }}
                       animate={scratchProgress > 500 ? { y: '-150%', opacity: 0 } : {}}
-                      className="absolute inset-0 bg-neutral-800 flex flex-col items-center justify-center p-8 select-none z-10"
+                      className="absolute inset-0 bg-gray-200 flex flex-col items-center justify-center p-8 select-none z-10"
                     >
-                       <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-4">
-                          <Zap className="w-6 h-6 text-neutral-600" />
+                       <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-4">
+                          <Zap className="w-6 h-6 text-brand" />
                        </div>
-                       <p className="text-neutral-400 font-black uppercase tracking-[0.2em] text-[10px]">Scratch to Reveal</p>
-                       <div className="mt-4 flex gap-1">
-                          {[1,2,3,4,5].map(i => (
-                            <div key={i} className="w-6 h-1 bg-neutral-700 rounded-full overflow-hidden">
-                               <motion.div 
-                                 initial={{ width: 0 }}
-                                 animate={{ width: `${Math.min((scratchProgress/500) * 100, 100)}%` }}
-                                 className="h-full bg-brand"
-                               />
-                            </div>
-                          ))}
-                       </div>
+                       <p className="text-gray-400 font-black uppercase tracking-[0.2em] text-[10px]">Scratch here</p>
                     </motion.div>
                  </div>
                  <button 
@@ -742,11 +950,11 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
                    className={cn(
                      "w-full py-6 rounded-2xl font-black uppercase tracking-widest text-xs transition-all",
                      scratchProgress > 500 
-                       ? "bg-brand text-dark hover:scale-105" 
-                       : "bg-surface text-neutral-700 border border-line cursor-not-allowed"
+                       ? "bg-brand text-white shadow-xl shadow-brand/20 hover:scale-105" 
+                       : "bg-gray-50 text-gray-400 border border-gray-100 cursor-not-allowed"
                    )}
                  >
-                   {claiming ? "Processing Link..." : scratchProgress > 500 ? "Claim Super Coins" : "Complete Scratching First"}
+                   {claiming ? "Processing..." : scratchProgress > 500 ? "Claim My Coins" : "Keep Scratching..."}
                  </button>
                  <button 
                    onClick={() => setShowTerms(true)}
@@ -791,8 +999,144 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
             </div>
           )}
         </AnimatePresence>
+
+        <AnimatePresence>
+          {selectedSellerProfile && (
+            <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+               <motion.div 
+                 initial={{ opacity: 0 }} 
+                 animate={{ opacity: 1 }} 
+                 exit={{ opacity: 0 }}
+                 onClick={() => setSelectedSellerProfile(null)}
+                 className="absolute inset-0 bg-dark/95 backdrop-blur-2xl"
+               />
+               <motion.div 
+                 initial={{ scale: 0.9, y: 30, opacity: 0 }}
+                 animate={{ scale: 1, y: 0, opacity: 1 }}
+                 exit={{ scale: 0.9, y: 30, opacity: 0 }}
+                 className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white border border-gray-100 rounded-[40px] shadow-2xl flex flex-col scrollbar-hide"
+               >
+                  {/* Profile Header */}
+                  <div className="relative h-48 sm:h-64 bg-gray-100">
+                    {selectedSellerProfile.businessDetails?.logoUrl ? (
+                      <img src={selectedSellerProfile.businessDetails.logoUrl} className="w-full h-full object-cover" alt="Shop Banner" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                         <Sprout className="w-16 h-16 text-brand/20" />
+                      </div>
+                    )}
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedSellerProfile(null);
+                      }}
+                      className="absolute top-6 right-6 z-50 w-12 h-12 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-lg hover:bg-white active:scale-90 transition-all pointer-events-auto"
+                    >
+                      <X className="w-6 h-6 text-gray-600" />
+                    </button>
+                    <div className="absolute -bottom-10 left-8 sm:left-12 flex items-end gap-5">
+                      <div className="w-24 h-24 sm:w-32 sm:h-32 bg-white rounded-3xl p-1 shadow-2xl">
+                        <div className="w-full h-full bg-gray-50 rounded-2xl flex items-center justify-center overflow-hidden border border-gray-100">
+                          {selectedSellerProfile.businessDetails?.logoUrl ? (
+                            <img src={selectedSellerProfile.businessDetails.logoUrl} className="w-full h-full object-cover" alt="Logo" />
+                          ) : (
+                            <User className="w-10 h-10 text-gray-200" />
+                          )}
+                        </div>
+                      </div>
+                      <div className="mb-4 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="bg-brand text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-md">Verified Merchant</span>
+                          <div className="flex items-center gap-1 bg-white/90 backdrop-blur px-2 py-1 rounded-full border border-gray-100 font-black text-[10px] text-gray-700 shadow-sm">
+                            <Star className="w-3 h-3 text-brand fill-brand" />
+                            {selectedSellerProfile.averageRating?.toFixed(1) || "5.0"}
+                          </div>
+                        </div>
+                        <h3 className="text-2xl sm:text-4xl font-black text-gray-800 uppercase tracking-tighter leading-none shadow-white drop-shadow-lg">
+                          {selectedSellerProfile.businessDetails?.shopName || selectedSellerProfile.fullName}
+                        </h3>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Profile Content */}
+                  <div className="p-8 sm:p-12 pt-16 sm:pt-20 space-y-10">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Business Bio</p>
+                          <p className="text-sm font-medium text-gray-600 leading-relaxed uppercase tracking-wider">
+                            {selectedSellerProfile.businessDetails?.bio || "A trusted provider of fresh, organic produce direct from the farm to your sector."}
+                          </p>
+                        </div>
+                        <div className="space-y-6">
+                          <div className="space-y-2">
+                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Operating Hours</p>
+                             <div className="flex items-center gap-3 text-sm font-black text-gray-800 uppercase tracking-tighter">
+                                <Clock className="w-5 h-5 text-brand" />
+                                {selectedSellerProfile.businessDetails?.operatingHours || "6:00 AM - 11:30 AM Daily"}
+                             </div>
+                          </div>
+                          <div className="space-y-2">
+                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Base Address</p>
+                             <div className="flex items-center gap-3 text-sm font-black text-gray-800 uppercase tracking-tighter">
+                                <MapPin className="w-5 h-5 text-brand" />
+                                {selectedSellerProfile.businessDetails?.address || "Global Market Sector"}
+                             </div>
+                          </div>
+                        </div>
+                     </div>
+
+                     {/* Reviews Section */}
+                     <div className="space-y-6">
+                        <div className="flex justify-between items-center px-1">
+                          <h4 className="text-xl font-black uppercase tracking-tighter">Client Reviews</h4>
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                            {selectedSellerProfile.totalRatings || 0} TOTAL RATINGS
+                          </span>
+                        </div>
+
+                        <div className="space-y-4">
+                           {(selectedSellerProfile.reviews || []).length > 0 ? (
+                             selectedSellerProfile.reviews?.map((review) => (
+                               <div key={review.id} className="bg-gray-50 rounded-2xl p-6 border border-gray-100 flex gap-4">
+                                 <div className="w-10 h-10 bg-brand/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <User className="w-5 h-5 text-brand" />
+                                 </div>
+                                 <div className="space-y-1">
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-[11px] font-black text-gray-800 uppercase">{review.customerName}</span>
+                                      <div className="flex gap-0.5">
+                                        {[1, 2, 3, 4, 5].map(s => (
+                                          <Star key={s} className={cn("w-2.5 h-2.5", s <= review.rating ? "text-brand fill-brand" : "text-gray-200")} />
+                                        ))}
+                                      </div>
+                                    </div>
+                                    <p className="text-xs font-medium text-gray-500">{review.comment}</p>
+                                    <p className="text-[8px] font-bold text-gray-300 uppercase mt-1">{new Date(review.createdAt).toLocaleDateString()}</p>
+                                 </div>
+                               </div>
+                             ))
+                           ) : (
+                             <div className="bg-gray-50 border-2 border-dashed border-gray-100 rounded-3xl p-12 text-center">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">No detailed reviews yet</p>
+                                <p className="text-[9px] font-bold text-gray-300 uppercase mt-1">Based on {selectedSellerProfile.totalRatings || 0} total ratings</p>
+                             </div>
+                           )}
+                        </div>
+                     </div>
+
+                     <button 
+                       onClick={() => setSelectedSellerProfile(null)}
+                       className="w-full py-5 bg-brand text-white rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-xl shadow-brand/20 hover:bg-brand/90 transition-all mb-4"
+                     >
+                       Back to Marketplace
+                     </button>
+                  </div>
+               </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
   );
 };
 
@@ -1031,38 +1375,90 @@ const SellerInfoDisplay: React.FC<{ sellerId: string; status: string; orderLocat
         </div>
 
         <div className="flex items-center justify-between mb-6 relative z-10">
-          <div className="space-y-1 sm:space-y-2">
+          <div className="flex-1 space-y-1 sm:space-y-2">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-brand rounded-full animate-pulse" />
               <p className="text-[8px] sm:text-[10px] font-black text-brand uppercase tracking-widest leading-none">Verified Merchant Hub</p>
             </div>
-            <div className="flex items-center gap-3">
-              <h4 className="text-lg sm:text-2xl font-black text-white uppercase tracking-tighter leading-none">{seller.businessDetails?.shopName || seller.fullName}</h4>
-              {seller.averageRating && (
-                <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg">
-                  <Star className="w-3 h-3 text-brand fill-brand" />
-                  <span className="text-[10px] sm:text-xs font-black text-white tabular-nums">{seller.averageRating.toFixed(1)}</span>
-                  <span className="text-[8px] font-bold text-neutral-500">({seller.totalRatings})</span>
+            <div className="flex items-start gap-4">
+              {seller.businessDetails?.logoUrl && (
+                <div className="w-12 h-12 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 flex-shrink-0">
+                  <img src={seller.businessDetails.logoUrl} className="w-full h-full object-cover" alt="Logo" />
                 </div>
               )}
+              <div className="space-y-1">
+                <div className="flex items-center gap-3">
+                  <h4 className="text-lg sm:text-2xl font-black text-white uppercase tracking-tighter leading-none">{seller.businessDetails?.shopName || seller.fullName}</h4>
+                  {seller.averageRating && (
+                    <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg">
+                      <Star className="w-3 h-3 text-brand fill-brand" />
+                      <span className="text-[10px] sm:text-xs font-black text-white tabular-nums">{seller.averageRating.toFixed(1)}</span>
+                      <span className="text-[8px] font-bold text-neutral-500">({seller.totalRatings})</span>
+                    </div>
+                  )}
+                </div>
+                {seller.businessDetails?.bio && (
+                  <p className="text-[9px] font-medium text-neutral-400 line-clamp-2 max-w-sm uppercase tracking-wider">{seller.businessDetails.bio}</p>
+                )}
+                {seller.businessDetails?.operatingHours && (
+                  <div className="flex items-center gap-2 text-[8px] font-black text-brand uppercase tracking-widest mt-1">
+                    <Clock className="w-2.5 h-2.5" />
+                    Hours: {seller.businessDetails.operatingHours}
+                  </div>
+                )}
+              </div>
             </div>
             
-            {status !== 'delivered' && etaInfo && (
-              <div className="flex items-center gap-3 mt-3">
-                <div className="bg-brand/10 border border-brand/20 px-3 py-1.5 rounded-xl flex items-center gap-2">
-                  <Clock className="w-3 h-3 text-brand" />
-                  <span className="text-[10px] font-black text-brand uppercase tracking-widest tabular-nums">ETA {etaInfo.minutes} MINS</span>
+        {status !== 'delivered' && etaInfo && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 mt-3">
+              <div className="bg-brand/10 border border-brand/20 px-3 py-1.5 rounded-xl flex items-center gap-2">
+                <Clock className="w-3 h-3 text-brand" />
+                <span className="text-[10px] font-black text-brand uppercase tracking-widest tabular-nums">ETA {etaInfo.minutes} MINS</span>
+              </div>
+              <p className="text-[8px] font-bold text-neutral-500 uppercase tracking-widest">
+                {etaInfo.stops > 0 ? `${etaInfo.stops} STOPS AWAY` : 'NEXT ARRIVAL'}
+              </p>
+            </div>
+            
+            {/* Live Tracking Map */}
+            {seller.currentLocation && (
+              <div className="h-48 rounded-3xl overflow-hidden border border-line shadow-inner relative group/map">
+                <MapContainer 
+                  centerPos={{ lat: seller.currentLocation.lat, lng: seller.currentLocation.lng }}
+                  zoom={15}
+                  markers={[
+                    {
+                      id: 'seller',
+                      lat: seller.currentLocation.lat,
+                      lng: seller.currentLocation.lng,
+                      label: 'COURIER',
+                      icon: 'brand'
+                    },
+                    {
+                      id: 'destination',
+                      lat: orderLocation.lat,
+                      lng: orderLocation.lng,
+                      label: 'DROP POINT',
+                      icon: 'green'
+                    }
+                  ]}
+                />
+                <div className="absolute top-4 left-4 right-4 flex justify-between pointer-events-none">
+                  <div className="bg-white/90 backdrop-blur px-2.5 py-1.5 rounded-lg border border-gray-100 shadow-sm flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-brand rounded-full animate-pulse" />
+                    <span className="text-[8px] font-black text-brand uppercase tracking-widest">Live Signal Active</span>
+                  </div>
                 </div>
-                <p className="text-[8px] font-bold text-neutral-500 uppercase tracking-widest">
-                  {etaInfo.stops > 0 ? `${etaInfo.stops} STOPS AWAY` : 'NEXT ARRIVAL'}
-                </p>
               </div>
             )}
           </div>
-          <div className="bg-brand/10 border border-brand/20 px-3 py-1.5 rounded-full flex items-center gap-2">
-            <Signal className="w-3 h-3 text-brand" />
-            <span className="text-[8px] font-black text-brand uppercase tracking-widest">{status.toUpperCase()}</span>
-          </div>
+        )}
+      </div>
+      <div className="bg-brand/10 border border-brand/20 px-3 py-1.5 rounded-full flex items-center gap-2">
+        <Signal className="w-3 h-3 text-brand" />
+        <span className="text-[8px] font-black text-brand uppercase tracking-widest">{status.toUpperCase()}</span>
+      </div>
         </div>
 
         {(status === 'accepted' || status === 'ongoing' || status === 'delivered') && seller.paymentInfo && (
@@ -1084,32 +1480,32 @@ const SellerInfoDisplay: React.FC<{ sellerId: string; status: string; orderLocat
 
             <div className="grid grid-cols-1 gap-3">
               {seller.paymentInfo.upiId && (
-                <div className="bg-dark/50 border border-line p-4 rounded-2xl flex items-center justify-between group/pay">
+                <div className="bg-gray-50 border border-gray-100 p-4 rounded-2xl flex items-center justify-between group/pay">
                   <div>
-                    <p className="text-[7px] font-black text-neutral-600 uppercase mb-1">VPA / UPI ID</p>
+                    <p className="text-[7px] font-black text-gray-400 uppercase mb-1">UPI ID</p>
                     <p className="text-xs sm:text-sm font-black text-brand tabular-nums select-all tracking-tight">{seller.paymentInfo.upiId}</p>
                   </div>
                   <button className="w-8 h-8 flex items-center justify-center bg-brand/5 rounded-lg opacity-0 group-hover/pay:opacity-100 transition-opacity">
-                    <Play className="w-3 h-3 text-brand fill-current" />
+                    <CheckCircle2 className="w-4 h-4 text-brand" />
                   </button>
                 </div>
               )}
               {seller.paymentInfo.phoneNumber && (
-                <div className="bg-dark/50 border border-line p-4 rounded-2xl flex items-center justify-between group/pay">
+                <div className="bg-gray-50 border border-gray-100 p-4 rounded-2xl flex items-center justify-between group/pay">
                   <div>
-                    <p className="text-[7px] font-black text-neutral-600 uppercase mb-1">Direct Settlement Num</p>
-                    <p className="text-xs sm:text-sm font-black text-white tabular-nums select-all tracking-tight">{seller.paymentInfo.phoneNumber}</p>
+                    <p className="text-[7px] font-black text-gray-400 uppercase mb-1">Phone Number</p>
+                    <p className="text-xs sm:text-sm font-black text-gray-800 tabular-nums select-all tracking-tight">{seller.paymentInfo.phoneNumber}</p>
                   </div>
-                  <button className="w-8 h-8 flex items-center justify-center bg-white/5 rounded-lg opacity-0 group-hover/pay:opacity-100 transition-opacity">
-                    <Play className="w-3 h-3 text-white fill-current" />
+                  <button className="w-8 h-8 flex items-center justify-center bg-gray-200 rounded-lg opacity-0 group-hover/pay:opacity-100 transition-opacity">
+                    <CheckCircle2 className="w-4 h-4 text-gray-400" />
                   </button>
                 </div>
               )}
             </div>
 
-            <div className="p-4 bg-brand/5 border border-brand/10 rounded-2xl">
-              <p className="text-[8px] font-bold text-neutral-500 uppercase leading-relaxed tracking-wider">
-                <span className="text-brand font-black">SECURITY PROTOCOL:</span> Always verify produce quality before final settlement. Peer-to-peer payments are non-reversible.
+            <div className="p-4 bg-gray-50 border border-gray-100 rounded-2xl">
+              <p className="text-[8px] font-bold text-gray-400 uppercase leading-relaxed tracking-wider">
+                <span className="text-brand font-black">IMPORTANT:</span> Always check your vegetables before paying. Peer-to-peer payments are non-refundable.
               </p>
             </div>
           </div>
@@ -1122,34 +1518,34 @@ const SellerInfoDisplay: React.FC<{ sellerId: string; status: string; orderLocat
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-dark/95 backdrop-blur-3xl"
+            className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-white/95 backdrop-blur-3xl"
           >
-            <div className="max-w-sm w-full bg-surface border border-brand/20 rounded-[40px] p-8 text-center space-y-6 shadow-2xl relative">
+            <div className="max-w-sm w-full bg-white border border-gray-100 rounded-[40px] p-8 text-center space-y-6 shadow-2xl relative">
               <button 
-                onClick={() => setShowQR(false)}
-                className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors"
+                onClick={(e) => { e.stopPropagation(); setShowQR(false); }}
+                className="absolute top-8 right-8 text-gray-400 hover:text-brand transition-colors z-50 p-2 pointer-events-auto"
               >
                 <X className="w-6 h-6" />
               </button>
               <div className="space-y-2">
-                <h5 className="text-2xl font-black uppercase tracking-tighter">Payment Matrix Scan</h5>
-                <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Scan with GPay, PhonePe or any UPI app</p>
+                <h5 className="text-2xl font-black uppercase tracking-tighter text-brand">Payment Scan</h5>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Scan with GPay, PhonePe or any UPI app</p>
               </div>
-              <div className="aspect-square bg-white rounded-3xl overflow-hidden flex items-center justify-center relative shadow-inner p-4">
+              <div className="aspect-square bg-gray-50 rounded-[32px] overflow-hidden flex items-center justify-center relative shadow-inner p-6 border border-gray-100">
                 {seller.paymentInfo?.qrCodeUrl ? (
-                  <img src={seller.paymentInfo.qrCodeUrl} alt="Store QR" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                  <img src={seller.paymentInfo.qrCodeUrl} alt="Store QR" className="w-full h-full object-contain mix-blend-multiply" referrerPolicy="no-referrer" />
                 ) : (
                   <div className="flex flex-col items-center gap-2">
                     <AlertCircle className="w-12 h-12 text-red-500" />
-                    <div className="text-neutral-900 font-black uppercase text-xs">QR LINK INVALID</div>
+                    <div className="text-gray-400 font-black uppercase text-xs">QR NOT FOUND</div>
                   </div>
                 )}
               </div>
               <button 
                 onClick={() => setShowQR(false)}
-                className="w-full h-16 bg-brand text-dark rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-[0_10px_30px_rgba(255,184,0,0.2)]"
+                className="w-full h-16 bg-brand text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-brand/20 hover:bg-brand/90 transition-all"
               >
-                Return to Terminal
+                Close QR Code
               </button>
             </div>
           </motion.div>
