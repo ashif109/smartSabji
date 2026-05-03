@@ -5,6 +5,7 @@ import { Users, ShoppingBag, BarChart3, ShieldAlert, CheckCircle2, UserX, Databa
 import { UserProfile, Order } from '../types';
 import { formatCurrency, cn, handleFirestoreError, OperationType } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import GeminiMarketInsights from './GeminiMarketInsights';
 
 const AdminView: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -259,39 +260,46 @@ const AdminView: React.FC = () => {
             <motion.div 
                key="analytics"
                initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
-               className="space-y-6"
+               className="space-y-8"
             >
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-white border border-gray-100 rounded-[40px] p-10 space-y-8 shadow-sm">
-                     <div className="flex justify-between items-center">
-                        <h4 className="text-xl font-black uppercase tracking-tighter text-gray-800">Fresh Momentum</h4>
-                        <div className="bg-brand/5 text-brand px-3 py-1 rounded-full text-[10px] font-black">+24% GROWTH</div>
-                     </div>
-                     <div className="h-64 flex items-end justify-between px-4 gap-2">
-                        {[40, 70, 45, 90, 65, 80, 100, 85, 95].map((h, i) => (
-                           <motion.div 
-                             key={i} 
-                             initial={{ height: 0 }} 
-                             animate={{ height: `${h}%` }}
-                             transition={{ delay: i * 0.05, type: 'spring', damping: 20 }}
-                             className="flex-1 bg-brand rounded-xl opacity-80 hover:opacity-100 transition-opacity cursor-pointer shadow-sm shadow-brand/10" 
-                           />
-                        ))}
-                     </div>
-                  </div>
-                  <div className="bg-brand border border-brand rounded-[40px] p-12 text-white flex flex-col justify-center items-center gap-6 text-center relative overflow-hidden shadow-2xl shadow-brand/20">
-                     <div className="absolute top-0 right-0 p-10 opacity-10">
-                        <Zap className="w-48 h-48 fill-white" />
-                     </div>
-                     <div className="w-20 h-20 bg-white/20 rounded-[28px] flex items-center justify-center">
-                        <Zap className="w-10 h-10 fill-white" />
-                     </div>
-                     <div className="space-y-3 relative z-10">
-                       <h4 className="text-4xl font-black uppercase tracking-tighter leading-tight">Harvest Peak Signal</h4>
-                       <p className="text-white/80 text-[10px] font-black uppercase tracking-[0.2em] max-w-xs mx-auto">Market logistics are currently operating at maximum capacity.</p>
-                     </div>
-                     <button className="bg-white text-brand px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl">Detailed Audit</button>
-                  </div>
+               {/* Pulse Summary Cards */}
+               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                 <div className="lg:col-span-2">
+                   <GeminiMarketInsights orders={orders} users={users} />
+                 </div>
+                 
+                 <div className="space-y-6">
+                    <div className="bg-white border border-gray-100 rounded-[40px] p-10 space-y-8 shadow-sm">
+                       <div className="flex justify-between items-center">
+                          <h4 className="text-xl font-black uppercase tracking-tighter text-gray-800">Fresh Momentum</h4>
+                          <div className="bg-brand/5 text-brand px-3 py-1 rounded-full text-[10px] font-black">+24% GROWTH</div>
+                       </div>
+                       <div className="h-64 flex items-end justify-between px-4 gap-2">
+                          {[40, 70, 45, 90, 65, 80, 100, 85, 95].map((h, i) => (
+                             <motion.div 
+                               key={i} 
+                               initial={{ height: 0 }} 
+                               animate={{ height: `${h}%` }}
+                               transition={{ delay: i * 0.05, type: 'spring', damping: 20 }}
+                               className="flex-1 bg-brand rounded-xl opacity-80 hover:opacity-100 transition-opacity cursor-pointer shadow-sm shadow-brand/10" 
+                             />
+                          ))}
+                       </div>
+                    </div>
+
+                    <div className="bg-brand border border-brand rounded-[40px] p-10 text-white flex flex-col justify-center items-center gap-6 text-center relative overflow-hidden shadow-2xl shadow-brand/20">
+                       <div className="absolute top-0 right-0 p-10 opacity-10">
+                          <Zap className="w-48 h-48 fill-white" />
+                       </div>
+                       <div className="w-16 h-16 bg-white/20 rounded-[28px] flex items-center justify-center">
+                          <Zap className="w-8 h-8 fill-white" />
+                       </div>
+                       <div className="space-y-2 relative z-10">
+                         <h4 className="text-2xl font-black uppercase tracking-tighter leading-tight">Harvest Peak</h4>
+                         <p className="text-white/80 text-[8px] font-black uppercase tracking-[0.2em] max-w-xs mx-auto">Market logistics are currently operating at maximum capacity.</p>
+                       </div>
+                    </div>
+                 </div>
                </div>
             </motion.div>
           )}
