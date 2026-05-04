@@ -1,7 +1,7 @@
 {
-  "name": "VegieRoute",
-  "short_name": "VegieRoute",
-  "description": "Premium Vegetable Delivery & Rewards",
+  "name": "Smart Sabji",
+  "short_name": "SmartSabji",
+  "description": "Fresh Vegetables Delivered in 30 Minutes",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0A0F0B",

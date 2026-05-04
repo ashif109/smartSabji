@@ -1,11 +1,12 @@
 {
-  "name": "VegieRoute",
-  "description": "Premium, ultra-formal logistics platform for localized vegetable supply chains, featuring real-time demand mapping and elite route optimization for neighborhood operators.",
+  "name": "Smart Sabji",
+  "description": "Hyperlocal vegetable delivery platform. Fresh vegetables delivered in 30 minutes from nearby vendors.",
   "requestFramePermissions": [
     "geolocation"
   ],
   "majorCapabilities": [
     "real_time_tracking",
-    "route_optimization"
+    "route_optimization",
+    "ai_recipe_assistant"
   ]
 }

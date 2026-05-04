@@ -57,11 +57,11 @@ const Auth: React.FC<AuthProps> = ({ onSuccess }) => {
           <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mb-12 shadow-xl">
              <Leaf className="w-12 h-12 text-brand" />
           </div>
-          <h1 className="text-[8vw] text-white leading-[0.85] tracking-tighter font-black uppercase">Vegie<br/>Route</h1>
-          <p className="text-white/80 font-black text-xl uppercase tracking-tighter mt-8">Direct from farm to your kitchen.</p>
+          <h1 className="text-[8vw] text-white leading-[0.85] tracking-tighter font-black uppercase italic">Smart<br/><span className="text-white/40">Sabji</span></h1>
+          <p className="text-white/80 font-black text-xl uppercase tracking-tighter mt-8">Nourishing Neighbors in 30 Mins.</p>
         </div>
         <div className="space-y-6 relative z-10">
-          <p className="text-white font-black text-2xl uppercase tracking-tighter">Hyperlocal Freshness</p>
+          <p className="text-white font-black text-2xl uppercase tracking-tighter italic">Freshness Protocol Active</p>
           <div className="h-2 w-32 bg-white rounded-full"></div>
         </div>
       </div>
@@ -77,7 +77,7 @@ const Auth: React.FC<AuthProps> = ({ onSuccess }) => {
              <div className="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-brand/20">
                 <Leaf className="w-10 h-10 text-white" />
              </div>
-             <h1 className="text-4xl text-gray-800 tracking-tighter uppercase font-black">VegieRoute</h1>
+             <h1 className="text-4xl text-gray-800 tracking-tighter uppercase font-black italic">Smart <span className="text-brand">Sabji</span></h1>
           </div>
 
           <p className="text-brand font-black text-[10px] sm:text-xs uppercase tracking-[0.3em] mb-4">Start your journey</p>

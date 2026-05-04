@@ -50,6 +50,31 @@ export interface SellerProfile extends UserProfile {
   reviews?: Review[];
 }
 
+export type VegetableCategory = "Leafy" | "Roots" | "Daily" | "Fruits" | "Herbs" | "Exotic";
+
+export interface Product {
+  id: string;
+  name: string;
+  category: VegetableCategory;
+  price: number;
+  unit: string;
+  description: string;
+  imageUrl: string;
+  stock: number;
+  sellerId: string;
+  rating: number;
+  localNames?: string[]; // English transliterations like "Aloo", "Tamatar", etc.
+}
+
+export interface Recipe {
+  id: string;
+  name: string;
+  description: string;
+  ingredients: { name: string; quantity: string }[];
+  steps: string[];
+  prepTime: string;
+}
+
 export interface VegetableItem {
   id: string;
   name: string;
