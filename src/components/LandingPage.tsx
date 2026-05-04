@@ -21,8 +21,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           </div>
           
           <div className="hidden md:flex items-center gap-8">
-            <a href="#how-it-works" className="text-sm font-bold uppercase tracking-widest text-gray-400 hover:text-brand transition-colors">How it works</a>
-            <a href="#benefits" className="text-sm font-bold uppercase tracking-widest text-gray-400 hover:text-brand transition-colors">Benefits</a>
+            <a href="#how-it-works" className="text-sm font-bold uppercase tracking-widest text-slate-500 hover:text-brand transition-colors">How it works</a>
+            <a href="#benefits" className="text-sm font-bold uppercase tracking-widest text-slate-500 hover:text-brand transition-colors">Benefits</a>
             <button 
               onClick={onStart}
               className="px-8 py-3 bg-brand text-white rounded-full font-bold uppercase tracking-widest text-xs hover:shadow-xl hover:shadow-brand/20 transition-all active:scale-95"
@@ -102,12 +102,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             >
               <div className="space-y-1">
                 <p className="text-3xl font-display font-bold italic tracking-tight">0.8km</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Avg. Radius</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Avg. Radius</p>
               </div>
               <div className="w-px h-10 bg-slate-200" />
               <div className="space-y-1">
                 <p className="text-3xl font-display font-bold italic tracking-tight">100%</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Traceability</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Traceability</p>
               </div>
             </motion.div>
           </div>
@@ -171,7 +171,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                   <step.icon className="w-10 h-10 text-brand" />
                 </div>
                 <h3 className="text-2xl font-black text-dark mb-4 tracking-tight uppercase italic">{step.title}</h3>
-                <p className="text-gray-400 font-medium leading-relaxed">{step.desc}</p>
+                <p className="text-slate-500 font-medium leading-relaxed">{step.desc}</p>
                 <div className="mt-8 text-6xl font-black text-gray-50 group-hover:text-brand/10 transition-colors">0{i+1}</div>
               </div>
             ))}

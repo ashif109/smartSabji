@@ -107,7 +107,9 @@ const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, cart, onUpda
                        </button>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex flex-col items-end gap-1">
+                    <p className="text-sm font-black text-dark tabular-nums">₹{item.product.price * item.quantity}</p>
+                    <p className="text-[9px] font-bold text-gray-300 uppercase tracking-widest">₹{item.product.price}/qty</p>
                   </div>
                 </div>
               ))}
@@ -119,8 +121,17 @@ const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, cart, onUpda
         {cart.length > 0 && (
           <div className="p-8 border-t border-gray-100 bg-gray-50/50 space-y-6">
             <div className="space-y-3">
-              <div className="flex justify-between items-center text-[11px] font-bold">
-                <span className="text-gray-400 uppercase tracking-widest text-center w-full italic">Ready for express delivery request?</span>
+              <div className="flex justify-between items-center text-sm font-bold">
+                <span className="text-gray-400 uppercase tracking-widest">Subtotal</span>
+                <span className="text-dark tabular-nums">₹{subtotal}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm font-bold">
+                <span className="text-gray-400 uppercase tracking-widest">Delivery</span>
+                <span className="text-brand tabular-nums">{deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}</span>
+              </div>
+              <div className="pt-3 border-t border-gray-100 flex justify-between items-center">
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-dark">Total Amount</span>
+                <span className="text-xl font-black text-brand tabular-nums">₹{totalAmount}</span>
               </div>
             </div>
 

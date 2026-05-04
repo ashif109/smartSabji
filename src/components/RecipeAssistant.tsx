@@ -1,17 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenAI } from "@google/genai";
 import { Sparkles, Send, Bot, User, Loader2, X, ChefHat, ShoppingCart, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { Product } from '../types';
+import { GeminiService } from '../services/GeminiService';
+import { CartService } from '../services/CartService';
 
 interface RecipeAssistantProps {
   products: Product[];
   onAddToCart: (product: Product) => void;
   onClose: () => void;
 }
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 const RecipeAssistant: React.FC<RecipeAssistantProps> = ({ products, onAddToCart, onClose }) => {
   const [input, setInput] = useState("");
@@ -35,31 +34,7 @@ const RecipeAssistant: React.FC<RecipeAssistantProps> = ({ products, onAddToCart
     setIsTyping(true);
 
     try {
-      const productList = products.map(p => `${p.name} (₹${p.price}/${p.unit})`).join(', ');
-      const systemPrompt = `
-        You are VegieRoute Chef, an AI culinary assistant for a hyperlocal vegetable delivery app.
-        
-        Available Fresh Produce:
-        ${productList}
-
-        Instructions:
-        1. Suggest healthy, delicious recipes based on the user's mood or available vegetables.
-        2. Format your response with a "Recipe Name", "Brief Intro", and "Steps".
-        3. IMPORTANT: At the end of your response, list the available products required for this recipe in a specific format: "PRODUCTS_NEEDED: [Product Name 1, Product Name 2]".
-        4. Match product names exactly as provided in the list above.
-        5. Be encouraging and chef-like!
-      `;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: userMessage,
-        config: {
-          systemInstruction: systemPrompt,
-          temperature: 0.8,
-        },
-      });
-
-      const aiResponse = response.text || "I'm having trouble thinking of a recipe right now. How about a fresh salad?";
+      const aiResponse = await GeminiService.getRecipeSuggestions(userMessage, products);
       
       // Parse suggested products
       let cleanedContent = aiResponse;
@@ -77,7 +52,7 @@ const RecipeAssistant: React.FC<RecipeAssistantProps> = ({ products, onAddToCart
       }]);
     } catch (error) {
       console.error("Gemini Assistant Error:", error);
-      setMessages(prev => [...prev, { role: 'assistant', content: "My kitchen is currently closed for maintenance. Please try again in a moment!" }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: "Our Chef is currently busy preparing a banquet. Please try again in a moment!" }]);
     } finally {
       setIsTyping(false);
     }

@@ -55,8 +55,8 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange, cartCount
               </div>
               
               <span className={cn(
-                "text-[9px] font-bold uppercase tracking-widest leading-none transition-all duration-500",
-                isActive ? "opacity-100" : "opacity-0 translate-y-2"
+                "text-[9px] font-black uppercase tracking-widest leading-none transition-all duration-500",
+                isActive ? "opacity-100 scale-110" : "opacity-40"
               )}>
                 {tab.label}
               </span>

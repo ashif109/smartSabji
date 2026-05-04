@@ -6,23 +6,20 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", sans-serif;
   
-  --color-brand: #00D26A;
-  --color-brand-muted: rgba(0, 210, 106, 0.1);
+  --color-brand: #34D399;
+  --color-brand-dark: #059669;
   --color-dark: #0F172A;
-  --color-surface: #FFFFFF;
-  --color-slate-50: #F8FAFC;
-  --color-slate-100: #F1F5F9;
 }
 
 @layer base {
   body {
-    @apply bg-slate-50 text-dark font-sans antialiased selection:bg-brand selection:text-white;
+    @apply bg-[#F8FAFC] text-dark font-sans antialiased selection:bg-brand selection:text-white;
   }
 }
 
 @layer components {
   .btn-brand {
-    @apply bg-brand text-white px-8 py-4 rounded-[20px] font-display font-bold text-base hover:bg-[#00B359] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 shadow-xl shadow-brand/20 flex items-center justify-center gap-2;
+    @apply bg-brand text-white px-8 py-5 rounded-[24px] font-display font-black uppercase text-xs tracking-[0.3em] hover:bg-brand-dark transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 shadow-2xl shadow-brand/20 flex items-center justify-center gap-3;
   }
   
   .btn-outline {
@@ -38,7 +35,7 @@
   }
 
   .input-premium {
-    @apply bg-white border border-slate-100 rounded-[24px] px-8 py-5 outline-none focus:ring-4 focus:ring-brand/5 focus:border-brand transition-all font-medium text-dark shadow-sm;
+    @apply bg-white border border-slate-200 rounded-[32px] px-8 py-5 outline-none focus:ring-8 focus:ring-brand/5 focus:border-brand transition-all font-bold text-dark shadow-sm;
   }
 }
 
