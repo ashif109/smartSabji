@@ -4,6 +4,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { Power, User, Leaf, Loader2, ShieldCheck, Zap } from 'lucide-react';
 import { UserProfile } from './types';
+import { handleFirestoreError, OperationType } from './lib/utils';
 
 import Auth from './components/Auth';
 import CustomerView from './components/CustomerView';
@@ -32,7 +33,7 @@ export default function App() {
           }
           setLoading(false);
         }, (error) => {
-          console.warn("Profile sync restricted or awaiting permissions:", error);
+          handleFirestoreError(error, OperationType.GET, `users/${u.uid}`, auth);
           setLoading(false);
         });
       } else {
@@ -52,7 +53,7 @@ export default function App() {
       <div className="min-h-[100dvh] flex items-center justify-center bg-white">
         <div className="text-center space-y-6">
           <Loader2 className="w-10 h-10 text-brand animate-spin mx-auto" />
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-brand">Smart Sabji</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-brand">VegieRoute</p>
         </div>
       </div>
     );

@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
 import { collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingBag, MapPin, Search, Sprout, User, ArrowRight, Clock, Signal, Plus, Minus, UserX, ShieldCheck, Loader2 } from 'lucide-react';
+import { ShoppingBag, MapPin, Search, Sprout, User, ArrowRight, Clock, Signal, Plus, Minus, UserX, ShieldCheck, Loader2, ChefHat, Sparkles } from 'lucide-react';
 import { Order, UserProfile, Product, VegetableCategory } from '../types';
 import { PRODUCTS } from '../constants';
 import { cn, handleFirestoreError, OperationType } from '../lib/utils';
 import ProductCard from './ProductCard';
 import CartSidebar from './CartSidebar';
 import BottomNav from './BottomNav';
+import RecipeAssistant from './RecipeAssistant';
 import { GoogleGenAI } from "@google/genai";
 
 interface CustomerViewProps {
@@ -16,6 +17,7 @@ interface CustomerViewProps {
 }
 
 const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
+  const [products, setProducts] = useState<Product[]>(PRODUCTS);
   const [cart, setCart] = useState<{ product: Product, quantity: number }[]>([]);
   const [showCart, setShowCart] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{lat: number, lng: number, address: string} | null>(null);
@@ -27,16 +29,42 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
   const [smartTranslatedQuery, setSmartTranslatedQuery] = useState<string | null>(null);
   const [searchingAI, setSearchingAI] = useState(false);
 
+  // Sync Products from Firestore
+  useEffect(() => {
+    let isSeeding = false;
+    const unsub = onSnapshot(collection(db, 'products'), async (snap) => {
+      const pData = snap.docs.map(d => ({ ...d.data(), id: d.id } as Product));
+      
+      // Auto-seed if empty (Initial setup for user)
+      if (pData.length === 0 && !isSeeding) {
+        isSeeding = true;
+        console.log("Seeding initial product inventory from catalog...");
+        for (const p of PRODUCTS) {
+          try {
+            await addDoc(collection(db, 'products'), p);
+          } catch (e) {
+            console.error("Seeding failed for product:", p.name, e);
+          }
+        }
+        isSeeding = false;
+      } else if (pData.length > 0) {
+        setProducts(pData);
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'products', auth);
+    });
+    return unsub;
+  }, []);
+
   const categories: (VegetableCategory | 'All')[] = ['All', 'Daily', 'Leafy', 'Roots', 'Fruits', 'Exotic', 'Herbs'];
 
-  // AI-powered smart search for ANY language
+  // AI-powered smart search
   useEffect(() => {
     const searchTimer = setTimeout(async () => {
       const queryText = searchQuery.toLowerCase().trim();
       if (queryText.length > 2) {
-        // 1. First, check if we have a direct word-by-word match (Fast)
         const queryWords = queryText.split(/\s+/);
-        const hasDirectMatch = PRODUCTS.some(p => {
+        const hasDirectMatch = products.some(p => {
           const productWords = [
             ...p.name.toLowerCase().split(/\s+/),
             ...(p.localNames?.flatMap(ln => ln.toLowerCase().split(/\s+/)) || [])
@@ -164,7 +192,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
     }
   };
 
-  const filteredProducts = PRODUCTS.filter(p => {
+  const filteredProducts = products.filter(p => {
     const rawQuery = searchQuery.toLowerCase().trim();
     if (!rawQuery) {
       return selectedCategory === 'All' || p.category === selectedCategory;
@@ -193,21 +221,24 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
   });
 
   return (
-    <div className="min-h-screen bg-white text-dark pb-32 overflow-x-hidden relative font-sans">
+    <div className="min-h-screen bg-slate-50 text-dark pb-32 overflow-x-hidden relative font-sans">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md px-6 py-6 border-b border-gray-100 flex justify-between items-center sticky top-0 z-40">
+      <header className="bg-white/80 backdrop-blur-md px-6 py-6 border-b border-slate-100 flex justify-between items-center sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center text-white shadow-lg shadow-brand/20">
             <Sprout className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-black text-dark tracking-tighter uppercase leading-none italic">Smart <span className="text-brand">Sabji</span></h1>
-            <div className="flex items-center gap-1 mt-1">
+            <h1 className="text-xl font-display font-bold text-dark tracking-tight uppercase leading-none italic">Vegie<span className="text-brand">Route</span></h1>
+            <button 
+              onClick={() => {/* Open location picker */}}
+              className="flex items-center gap-1 mt-1 group"
+            >
                <MapPin className="w-3 h-3 text-brand" />
-               <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest line-clamp-1 max-w-[120px]">
+               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest line-clamp-1 max-w-[120px] group-hover:text-brand transition-colors">
                   {selectedLocation?.address || "Detecting Node..."}
                </span>
-            </div>
+            </button>
           </div>
         </div>
         
@@ -218,7 +249,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
            >
               <ShoppingBag className="text-white w-6 h-6" />
               {cart.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-brand text-white text-[8px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-dark">
+                <span className="absolute -top-1 -right-1 bg-brand text-white text-[8px] font-black w-6 h-6 flex items-center justify-center rounded-full border-2 border-dark shadow-lg">
                    {cart.reduce((a, b) => a + b.quantity, 0)}
                 </span>
               )}
@@ -229,76 +260,104 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
       <main className="max-w-7xl mx-auto px-6 mt-8">
         {activeTab === 'market' && (
           <div className="space-y-12">
-            {/* Search & Categories */}
-            <div className="space-y-6">
+            {/* AI Kitchen Banner */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              onClick={() => setActiveTab('inbox')}
+              className="bg-brand border border-brand/20 rounded-[32px] md:rounded-[40px] p-6 md:p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8 relative overflow-hidden cursor-pointer group hover:shadow-2xl hover:shadow-brand/20 transition-all duration-500"
+            >
+              <div className="absolute top-0 right-0 p-8 md:p-12 opacity-10 group-hover:scale-125 transition-transform duration-1000">
+                <ChefHat className="w-32 md:w-48 h-32 md:h-48 fill-white" />
+              </div>
+              <div className="space-y-3 md:space-y-4 relative z-10 text-center md:text-left">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest">
+                  <Sparkles className="w-3 h-3" />
+                  <span>Chef Gemini Powered</span>
+                </div>
+                <h2 className="text-3xl md:text-5xl font-display font-bold italic tracking-tight leading-none uppercase">What should I <br /> cook today?</h2>
+                <p className="text-white/80 text-[10px] md:text-xs font-medium max-w-sm tracking-wide">
+                  Ask our AI to curate a recipe based on your mood. Add ingredients to cart in one click.
+                </p>
+                <div className="flex items-center justify-center md:justify-start gap-2 text-white font-bold uppercase tracking-widest text-[9px] md:text-[10px] group-hover:gap-4 transition-all">
+                  <span>Start culinary session</span>
+                  <ArrowRight className="w-3 md:w-4 h-3 md:h-4" />
+                </div>
+              </div>
+              <div className="aspect-square w-24 md:w-48 bg-white/10 rounded-[24px] md:rounded-[32px] backdrop-blur-md flex items-center justify-center border border-white/20 shadow-xl group-hover:rotate-6 transition-transform">
+                 <ChefHat className="w-12 md:w-24 h-12 md:h-24 text-white" />
+              </div>
+            </motion.div>
+
+            {/* Search */}
+            <div className="space-y-4 md:space-y-6">
               <div className="relative group">
-                <div className="absolute left-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <div className="absolute left-6 md:left-8 top-1/2 -translate-y-1/2 flex items-center gap-2">
                   {searchingAI ? (
-                    <Loader2 className="animate-spin text-brand w-5 h-5" />
+                    <Loader2 className="animate-spin text-brand w-5 h-5 md:w-6 md:h-6" />
                   ) : (
-                    <Search className="text-gray-400 w-5 h-5 group-focus-within:text-brand transition-colors" />
+                    <Search className="text-slate-300 w-5 h-5 md:w-6 md:h-6 group-focus-within:text-brand transition-colors" />
                   )}
                 </div>
                 <input 
                   type="text" 
-                  placeholder="Search Subzi in any language (Aloo, Kanda, Mirch...)" 
+                  placeholder="Search Subzi (Aloo, Kanda...)" 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-[28px] px-16 py-5 text-sm font-medium focus:bg-white focus:border-brand focus:ring-4 focus:ring-brand/5 outline-none transition-all shadow-sm"
+                  className="w-full bg-white border border-slate-100 rounded-[28px] md:rounded-[32px] pl-14 md:pl-20 pr-6 md:pr-20 py-4 md:py-7 text-sm md:text-base font-medium focus:ring-8 focus:ring-brand/5 focus:border-brand outline-none transition-all shadow-sm"
                 />
                 {searchingAI && (
-                  <div className="absolute right-6 top-1/2 -translate-y-1/2">
-                    <span className="text-[10px] font-black text-brand animate-pulse uppercase tracking-widest">Smart Identifying...</span>
+                  <div className="absolute right-6 md:right-8 top-1/2 -translate-y-1/2 hidden sm:block">
+                    <span className="text-[9px] md:text-[10px] font-black text-brand animate-pulse uppercase tracking-[0.2em]">AI Syncing...</span>
                   </div>
                 )}
               </div>
               
               {!searchQuery && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide"
-                >
+                <div className="flex gap-2 md:gap-3 overflow-x-auto pb-4 scrollbar-hide px-0 md:px-2">
                   {categories.map(cat => (
                     <button 
                       key={cat}
                       onClick={() => setSelectedCategory(cat)}
                       className={cn(
-                        "px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border cursor-pointer",
+                        "px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border cursor-pointer",
                         selectedCategory === cat 
-                          ? "bg-dark text-white border-dark" 
-                          : "bg-white text-gray-400 border-gray-100 hover:border-brand/40 hover:text-brand"
+                          ? "bg-dark text-white border-dark shadow-xl" 
+                          : "bg-white text-slate-400 border-slate-100 hover:border-brand/40 hover:text-brand shadow-sm"
                       )}
                     >
                       {cat}
                     </button>
                   ))}
-                </motion.div>
+                </div>
               )}
             </div>
 
-            {/* Grid */}
-            <div className="space-y-6">
+            {/* Products */}
+            <div className="space-y-8">
               <div className="flex justify-between items-end">
                 <div>
-                   <h3 className="text-2xl font-black italic tracking-tighter uppercase text-dark">
-                     {searchQuery ? `Search Results for "${searchQuery}"` : "Fresh Arrivals"}
+                   <h3 className="text-3xl font-display font-bold italic tracking-tight uppercase text-dark">
+                     {searchQuery ? `Inventory Search: "${searchQuery}"` : "Daily Harvest"}
                    </h3>
-                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                     {searchQuery ? (smartTranslatedQuery ? `AI Identified: ${smartTranslatedQuery}` : "Matching traditional & English names") : "From local micro-farms to your door"}
-                   </p>
+                   <div className="flex items-center gap-2 mt-1">
+                      <div className="w-1.5 h-1.5 bg-brand rounded-full animate-pulse" />
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        {searchQuery ? (smartTranslatedQuery ? `AI Result: ${smartTranslatedQuery}` : "Real-time matching active") : "Directly from micro-farms"}
+                      </p>
+                   </div>
                 </div>
                 {searchQuery && (
                   <button 
                     onClick={() => setSearchQuery("")}
-                    className="text-brand text-[10px] font-black uppercase tracking-widest"
+                    className="text-brand text-[10px] font-bold uppercase tracking-widest border-b border-brand/20 hover:border-brand transition-all pb-1"
                   >
-                    Clear Search
+                    Reset Filter
                   </button>
                 )}
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-8">
                 {filteredProducts.map(product => (
                   <ProductCard 
                     key={product.id} 
@@ -311,18 +370,28 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
               </div>
 
               {filteredProducts.length === 0 && (
-                <div className="py-20 text-center space-y-4 opacity-50">
-                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
-                    <Search className="w-8 h-8 text-gray-300" />
+                <div className="py-32 text-center space-y-6">
+                  <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mx-auto border-2 border-dashed border-slate-200">
+                    <Search className="w-10 h-10 text-slate-200" />
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-black uppercase tracking-widest">No Sabji found</p>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Try searching for Aloo, Mirch, or Tamatar</p>
+                  <div className="space-y-2">
+                    <p className="text-sm font-bold uppercase tracking-widest text-slate-400">Node match not found</p>
+                    <p className="text-[10px] font-medium text-slate-300 uppercase italic">Try searching for local variants (e.g. Baigan, Batata)</p>
                   </div>
                 </div>
               )}
             </div>
           </div>
+        )}
+
+        {activeTab === 'inbox' && (
+           <div className="h-[calc(100vh-180px)] min-h-[600px]">
+              <RecipeAssistant 
+                products={products} 
+                onAddToCart={addToCart} 
+                onClose={() => setActiveTab('market')} 
+              />
+           </div>
         )}
 
         {activeTab === 'orders' && (

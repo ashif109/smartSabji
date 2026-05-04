@@ -17,7 +17,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center shadow-lg shadow-brand/20">
               <Leaf className="text-white w-6 h-6" />
             </div>
-            <span className="text-2xl font-black tracking-tighter text-dark uppercase">Smart <span className="text-brand">Sabji</span></span>
+            <span className="text-2xl font-black tracking-tighter text-dark uppercase">Vegie<span className="text-brand">Route</span></span>
           </div>
           
           <div className="hidden md:flex items-center gap-8">
@@ -34,57 +34,63 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <div className="space-y-10">
+      <section className="pt-40 pb-24 px-6 relative overflow-hidden">
+        <div className="absolute top-0 left-1/2 -underline-x-1/2 w-full h-full bg-[radial-gradient(circle_at_center,_var(--color-brand-muted)_0%,_transparent_70%)] opacity-50" />
+        
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center relative z-10">
+          <div className="space-y-12">
             <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-brand/10 border border-brand/20 rounded-full text-brand text-xs font-black uppercase tracking-[0.2em]"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="inline-flex items-center gap-3 px-5 py-2 bg-white rounded-full shadow-sm border border-slate-100"
             >
-              <Zap className="w-4 h-4" />
-              <span>Express Delivery in 30 Mins</span>
+              <div className="flex -space-x-2">
+                {[1,2,3].map(i => (
+                  <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 overflow-hidden">
+                    <img src={`https://i.pravatar.cc/100?img=${i+20}`} alt="user" className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </div>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">+2.4k active in your sector</span>
             </motion.div>
             
             <motion.h1 
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="text-6xl md:text-8xl font-black text-dark tracking-tighter leading-[0.9]"
+              className="text-7xl md:text-9xl font-display font-bold text-dark tracking-tight leading-[0.85]"
             >
-              Fresh <span className="text-brand">Sabji</span> <br />
-              Direct to <br />
-              Your Door.
+              The <span className="text-brand italic">Fresh</span> <br />
+              Standard.
             </motion.h1>
             
             <motion.p 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-gray-400 text-lg md:text-xl font-medium max-w-lg leading-relaxed"
+              className="text-slate-500 text-xl font-medium max-w-xl leading-relaxed"
             >
-              Connect with local farmers and premium vendors. Hyperlocal delivery of the freshest vegetables curated for your health.
+              Skip the middleman. We connect you directly to local agricultural nodes for farm-to-door delivery in under 30 minutes. 
             </motion.p>
             
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="flex flex-col sm:flex-row gap-4"
+              className="flex flex-col sm:flex-row gap-6"
             >
               <button 
                 onClick={onStart}
-                className="btn-brand flex items-center justify-center gap-3 overflow-hidden group"
+                className="btn-brand text-lg px-12 py-6 group"
               >
-                <span>🚀 Order Now</span>
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                <span>Enter Marketplace</span>
+                <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
               </button>
               <button 
                 onClick={onStart}
-                className="btn-outline flex items-center justify-center gap-3"
+                className="btn-outline text-lg px-12 py-6"
               >
-                <MapPin className="w-5 h-5" />
-                <span>Check Nearby Vendors</span>
+                <MapPin className="w-6 h-6" />
+                <span>Locate Nearby Node</span>
               </button>
             </motion.div>
 
@@ -92,65 +98,52 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
-              className="pt-8 flex items-center gap-8 border-t border-gray-100"
+              className="flex items-center gap-10 pt-10"
             >
-              <div>
-                <p className="text-2xl font-black text-dark italic">10k+</p>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Happy Cooks</p>
+              <div className="space-y-1">
+                <p className="text-3xl font-display font-bold italic tracking-tight">0.8km</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Avg. Radius</p>
               </div>
-              <div className="h-10 w-px bg-gray-100" />
-              <div>
-                <p className="text-2xl font-black text-brand italic">500+</p>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Local Sellers</p>
-              </div>
-              <div className="h-10 w-px bg-gray-100" />
-              <div className="flex items-center gap-2">
-                <div className="flex -space-x-3">
-                  {[1,2,3,4].map(i => (
-                    <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden">
-                      <img src={`https://i.pravatar.cc/100?img=${i+10}`} alt="user" className="w-full h-full object-cover" />
-                    </div>
-                  ))}
-                </div>
-                <div className="flex items-center gap-0.5 ml-2">
-                  <Star className="w-3 h-3 text-brand fill-brand" />
-                  <span className="text-[10px] font-bold text-gray-800">4.9/5</span>
-                </div>
+              <div className="w-px h-10 bg-slate-200" />
+              <div className="space-y-1">
+                <p className="text-3xl font-display font-bold italic tracking-tight">100%</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Traceability</p>
               </div>
             </motion.div>
           </div>
 
           <motion.div 
-            initial={{ opacity: 0, scale: 0.8 }}
+            initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2, type: 'spring' }}
+            transition={{ delay: 0.2, duration: 1 }}
             className="relative"
           >
-            <div className="absolute inset-0 bg-brand/20 blur-[130px] rounded-full translate-x-10 translate-y-10" />
-            <div className="relative aspect-square rounded-[60px] overflow-hidden shadow-2xl shadow-brand/20 border-8 border-white">
+            <div className="absolute -inset-10 bg-brand/10 blur-[120px] rounded-full animate-pulse" />
+            <div className="relative aspect-[4/5] rounded-[64px] overflow-hidden shadow-2xl skew-y-3 hover:skew-y-0 transition-transform duration-1000 border-[12px] border-white ring-1 ring-slate-100 bg-white">
                <img 
-                 src="https://images.unsplash.com/photo-1597362868479-35442177a630?q=80&w=1000&auto=format&fit=crop" 
-                 alt="Fresh Vegetables" 
-                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-[2s]"
+                 src="https://images.unsplash.com/photo-1610348725531-843dff563e2c?q=80&w=1000&auto=format&fit=crop" 
+                 alt="Fresh Produce" 
+                 className="w-full h-full object-cover scale-110 hover:scale-100 transition-transform duration-[3s]"
                />
-               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-12">
-                  <div className="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-[32px] space-y-4">
-                    <div className="flex items-center gap-4">
-                       <div className="w-12 h-12 bg-brand rounded-2xl flex items-center justify-center">
-                          <Truck className="text-white w-6 h-6" />
-                       </div>
-                       <div>
-                          <p className="text-white font-black text-xl italic tracking-tighter">On Its Way!</p>
-                          <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">Driver: Rajesh M.</p>
-                       </div>
+               <div className="absolute inset-0 bg-gradient-to-t from-dark/60 via-transparent to-transparent flex flex-col justify-end p-12">
+                  <div className="glass-dark p-8 rounded-[40px] space-y-6">
+                    <div className="flex items-center justify-between">
+                       <p className="text-white font-display font-bold text-2xl tracking-tight italic">Live Stock Node</p>
+                       <div className="w-3 h-3 bg-brand rounded-full animate-ping" />
                     </div>
-                    <div className="h-1 bg-white/20 rounded-full overflow-hidden">
-                       <motion.div 
-                         initial={{ width: 0 }}
-                         animate={{ width: '70%' }}
-                         transition={{ duration: 4, repeat: Infinity }}
-                         className="h-full bg-brand" 
-                       />
+                    <div className="space-y-3">
+                       <div className="flex justify-between text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                          <span>Harvest Freshness</span>
+                          <span>98%</span>
+                       </div>
+                       <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            whileInView={{ width: '98%' }}
+                            transition={{ duration: 1.5 }}
+                            className="h-full bg-brand" 
+                          />
+                       </div>
                     </div>
                   </div>
                </div>
@@ -249,7 +242,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center">
                   <Leaf className="text-white w-6 h-6" />
                 </div>
-                <span className="text-2xl font-black tracking-tighter uppercase">Smart <span className="text-brand">Sabji</span></span>
+                <span className="text-2xl font-black tracking-tighter uppercase">Vegie<span className="text-brand">Route</span></span>
               </div>
               <p className="text-white/40 max-w-sm text-lg font-medium">Building a more resilient, localized, and transparent food system for everyone.</p>
             </div>
@@ -274,7 +267,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           </div>
           
           <div className="pt-10 flex flex-col md:flex-row justify-between items-center gap-6">
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">© 2026 SMART SABJI TECHNOLOGIES</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">© 2026 VEGIEROUTE TECHNOLOGIES</p>
             <div className="flex gap-8 text-[10px] font-black uppercase tracking-[0.4em] text-white/20">
               <a href="#" className="hover:text-brand transition-colors">Privacy</a>
               <a href="#" className="hover:text-brand transition-colors">Terms</a>

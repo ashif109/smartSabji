@@ -1,5 +1,5 @@
 {
-  "name": "Smart Sabji",
+  "name": "VegieRoute",
   "description": "Hyperlocal vegetable delivery platform. Fresh vegetables delivered in 30 minutes from nearby vendors.",
   "requestFramePermissions": [
     "geolocation"

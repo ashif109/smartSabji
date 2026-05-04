@@ -1,6 +1,7 @@
 import React from 'react';
-import { Sprout, ShoppingBag, List, User, Signal, MessageSquare } from 'lucide-react';
+import { Store, ChefHat, Package, UserCircle, Sparkles } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface BottomNavProps {
   activeTab: string;
@@ -10,31 +11,58 @@ interface BottomNavProps {
 
 const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange, cartCount }) => {
   const tabs = [
-    { id: 'market', icon: Sprout, label: 'Market' },
-    { id: 'orders', icon: List, label: 'Orders' },
-    { id: 'inbox', icon: Signal, label: 'Alerts' },
-    { id: 'profile', icon: User, label: 'Hub' }
+    { id: 'market', icon: Store, label: 'Market' },
+    { id: 'inbox', icon: ChefHat, label: 'Kitchen' },
+    { id: 'orders', icon: Package, label: 'Orders' },
+    { id: 'profile', icon: UserCircle, label: 'Profile' }
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[100] px-6 pb-6 pointer-events-none">
-      <div className="max-w-md mx-auto h-[72px] bg-white border border-gray-100 rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex items-center justify-around pointer-events-auto overflow-hidden relative px-4">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => onTabChange(tab.id)}
-            className={cn(
-              "flex flex-col items-center gap-1.5 transition-all duration-300 px-4 py-2 rounded-2xl relative",
-              activeTab === tab.id ? "text-brand" : "text-gray-400 opacity-60 hover:opacity-100"
-            )}
-          >
-            {activeTab === tab.id && (
-              <div className="absolute inset-x-0 -bottom-1 h-1 bg-brand rounded-full mx-auto w-4" />
-            )}
-            <tab.icon className={cn("w-6 h-6", activeTab === tab.id ? "animate-bounce-short" : "")} />
-            <span className="text-[9px] font-black uppercase tracking-widest leading-none">{tab.label}</span>
-          </button>
-        ))}
+    <div className="fixed bottom-0 left-0 right-0 z-[100] px-6 pb-10 pointer-events-none">
+      <div className="max-w-md mx-auto h-[84px] bg-white/80 backdrop-blur-2xl border border-slate-100 rounded-[36px] shadow-2xl shadow-brand/10 flex items-center justify-between pointer-events-auto px-2">
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => onTabChange(tab.id)}
+              className={cn(
+                "relative flex-1 flex flex-col items-center justify-center gap-1.5 transition-all duration-500 py-3 rounded-[28px] overflow-hidden group",
+                isActive ? "text-brand" : "text-slate-400 hover:text-slate-600"
+              )}
+            >
+              <AnimatePresence>
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTabBg"
+                    className="absolute inset-0 bg-brand/5 border border-brand/10 rounded-[28px]"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+              </AnimatePresence>
+              
+              <div className="relative">
+                <tab.icon className={cn(
+                  "w-6 h-6 transition-transform duration-500",
+                  isActive ? "scale-110" : "group-hover:scale-105"
+                )} />
+                {tab.id === 'inbox' && (
+                  <Sparkles className="absolute -top-1.5 -right-1.5 w-3 h-3 text-brand animate-pulse" />
+                )}
+                {tab.id === 'market' && cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-brand rounded-full ring-2 ring-white" />
+                )}
+              </div>
+              
+              <span className={cn(
+                "text-[9px] font-bold uppercase tracking-widest leading-none transition-all duration-500",
+                isActive ? "opacity-100" : "opacity-0 translate-y-2"
+              )}>
+                {tab.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

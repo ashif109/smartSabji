@@ -1,6 +1,6 @@
 {
-  "name": "Smart Sabji",
-  "short_name": "SmartSabji",
+  "name": "VegieRoute",
+  "short_name": "VegieRoute",
   "description": "Fresh Vegetables Delivered in 30 Minutes",
   "start_url": "/",
   "display": "standalone",

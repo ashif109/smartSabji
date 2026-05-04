@@ -37,7 +37,7 @@ const RecipeAssistant: React.FC<RecipeAssistantProps> = ({ products, onAddToCart
     try {
       const productList = products.map(p => `${p.name} (₹${p.price}/${p.unit})`).join(', ');
       const systemPrompt = `
-        You are Smart Sabji Chef, an AI culinary assistant for a hyperlocal vegetable delivery app.
+        You are VegieRoute Chef, an AI culinary assistant for a hyperlocal vegetable delivery app.
         
         Available Fresh Produce:
         ${productList}
@@ -144,7 +144,7 @@ const RecipeAssistant: React.FC<RecipeAssistantProps> = ({ products, onAddToCart
             
             {msg.suggestedProducts && msg.suggestedProducts.length > 0 && (
               <div className="w-full space-y-3 mt-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-brand">Add ingredients from Smart Sabji:</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-brand">Add ingredients from VegieRoute:</p>
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   {getSuggestedProducts(msg.suggestedProducts).map(product => (
                     <div key={product.id} className="min-w-[140px] bg-white border border-gray-100 rounded-2xl p-3 shadow-sm flex flex-col items-center text-center space-y-2 border-b-4 border-b-brand/20">

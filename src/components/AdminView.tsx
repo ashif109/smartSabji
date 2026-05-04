@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
-import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, where } from 'firebase/firestore';
-import { Users, ShoppingBag, BarChart3, ShieldAlert, CheckCircle2, UserX, Database, Activity, Globe, Zap, ArrowUpRight, Search, Sprout } from 'lucide-react';
-import { UserProfile, Order } from '../types';
+import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, where, getDocs } from 'firebase/firestore';
+import { Users, ShoppingBag, BarChart3, ShieldAlert, CheckCircle2, UserX, Database, Activity, Globe, Zap, ArrowUpRight, Search, Sprout, RefreshCw, Sparkles } from 'lucide-react';
+import { UserProfile, Order, Product } from '../types';
 import { formatCurrency, cn, handleFirestoreError, OperationType } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import GeminiMarketInsights from './GeminiMarketInsights';
+import { PRODUCTS } from '../constants';
 
 const AdminView: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeTab, setActiveTab] = useState<'directory' | 'logistics' | 'analytics'>('directory');
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
 
   // Advanced Filters for Logistics
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -54,6 +57,39 @@ const AdminView: React.FC = () => {
   const activeSellers = users.filter(u => u.role === 'seller').length;
   const activeCustomers = users.filter(u => u.role === 'customer').length;
 
+  const syncCatalog = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    setSyncStatus("Warming engines...");
+    
+    try {
+      const snap = await getDocs(collection(db, 'products'));
+      const dbProducts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+      
+      let updatedCount = 0;
+      for (const p of PRODUCTS) {
+        setSyncStatus(`Syncing: ${p.name}`);
+        const existing = dbProducts.find(dbP => dbP.name === p.name);
+        if (existing) {
+          // Update existing with new imageUrl if it changed
+          await updateDoc(doc(db, 'products', existing.id), {
+            imageUrl: p.imageUrl,
+            description: p.description,
+            localNames: p.localNames
+          });
+          updatedCount++;
+        }
+      }
+      setSyncStatus(`Success! Updated ${updatedCount} items.`);
+    } catch (error) {
+      console.error("Sync failed:", error);
+      setSyncStatus("Sync failed. Check console.");
+    } finally {
+      setTimeout(() => setSyncStatus(null), 3000);
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F4F7F5] text-dark pb-24 font-sans">
       {/* Top Header */}
@@ -65,10 +101,29 @@ const AdminView: React.FC = () => {
           <h1 className="text-2xl font-display font-black text-brand tracking-tighter uppercase leading-none">Console</h1>
         </div>
         <div className="flex items-center gap-4">
+          {syncStatus && (
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="px-4 py-2 bg-yellow-50 border border-yellow-100 rounded-full flex items-center gap-2"
+            >
+              <RefreshCw className={cn("w-3 h-3 text-yellow-600", isSyncing ? "animate-spin" : "")} />
+              <span className="text-[9px] font-black text-yellow-700 uppercase tracking-wider">{syncStatus}</span>
+            </motion.div>
+          )}
           <div className="bg-brand/10 px-3 py-1.5 rounded-full flex items-center gap-2">
             <Activity className="w-3 h-3 text-brand" />
             <span className="text-[10px] font-black text-brand uppercase tracking-wider">MARKET OPTIMAL</span>
           </div>
+          <button 
+            disabled={isSyncing}
+            onClick={syncCatalog}
+            className="bg-gray-50 p-2 rounded-full text-gray-400 hover:text-brand transition-colors relative group"
+            title="Update Product Catalog Cache"
+          >
+            <Database className="w-5 h-5" />
+            <div className="absolute inset-0 bg-brand rounded-full scale-0 group-hover:scale-100 transition-transform opacity-10" />
+          </button>
           <button onClick={() => auth.signOut()} className="bg-gray-50 p-2 rounded-full text-gray-400 hover:text-red-500 transition-colors">
             <UserX className="w-5 h-5" />
           </button>

@@ -1,8 +1,7 @@
 import React from 'react';
 import { Product } from '../types';
-import { ShoppingCart, Star, Plus, Minus } from 'lucide-react';
+import { Star, Plus, Minus } from 'lucide-react';
 import { motion } from 'motion/react';
-import { cn, formatCurrency } from '../lib/utils';
 
 interface ProductCardProps {
   product: Product;
@@ -16,72 +15,81 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart, quantit
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white border border-gray-100 rounded-[32px] p-4 flex flex-col gap-4 group hover:shadow-xl hover:shadow-brand/5 hover:border-brand/20 transition-all relative"
+      className="bg-white border border-slate-100 rounded-[28px] md:rounded-[32px] p-3 md:p-4 flex flex-col gap-3 md:gap-4 group hover:shadow-2xl hover:shadow-brand/5 hover:border-brand/20 transition-all relative overflow-hidden h-full"
     >
-      <div className="relative aspect-square rounded-[24px] overflow-hidden bg-gray-50 border border-gray-50 flex items-center justify-center">
+      <div className="relative aspect-square rounded-[20px] md:rounded-[24px] overflow-hidden bg-slate-100 flex items-center justify-center shrink-0">
          <img 
            src={product.imageUrl} 
            alt={product.name} 
-           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" 
            referrerPolicy="no-referrer"
            onError={(e) => {
-             const img = e.currentTarget;
-             img.src = 'https://images.unsplash.com/photo-1610348725531-843dff563e2c?q=80&w=400&auto=format&fit=crop';
-             img.className = 'w-1/2 h-1/2 object-contain opacity-20';
+             const target = e.target as HTMLImageElement;
+             target.src = 'https://images.unsplash.com/photo-1610348725531-843dff563e2c?q=80&w=400&auto=format&fit=crop';
            }}
          />
-         <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
-            <Star className="w-3 h-3 text-brand fill-brand" />
-            <span className="text-[10px] font-black">{product.rating}</span>
+         <div className="absolute top-2 left-2 md:top-3 md:left-3 flex flex-wrap gap-1 md:gap-2">
+            <div className="bg-white/90 backdrop-blur-md px-1.5 py-0.5 md:px-2 md:py-1 rounded-lg flex items-center gap-1 shadow-sm border border-slate-100">
+               <Star className="w-2.5 h-2.5 md:w-3 md:h-3 text-brand fill-brand" />
+               <span className="text-[9px] md:text-[10px] font-bold text-dark tracking-tighter">{product.rating}</span>
+            </div>
+            {product.category === 'Daily' && (
+              <div className="bg-brand text-white px-1.5 py-0.5 md:px-2 md:py-1 rounded-lg text-[7px] md:text-[8px] font-black uppercase tracking-widest shadow-lg shadow-brand/20 whitespace-nowrap">
+                Essential
+              </div>
+            )}
          </div>
-         {product.stock < 10 && (
-           <div className="absolute bottom-3 left-3 bg-red-500 text-white px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest">
-              Only {product.stock} left
-           </div>
-         )}
+         
+         <div className="absolute bottom-2 right-2 md:bottom-3 md:right-3">
+            <div className="bg-dark/80 backdrop-blur-md px-2 py-1 md:px-3 md:py-1.5 rounded-full text-white text-[7px] md:text-[9px] font-bold uppercase tracking-widest flex items-center gap-1.5 md:gap-2 whitespace-nowrap">
+              <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-brand rounded-full animate-pulse" />
+              Node
+            </div>
+         </div>
       </div>
 
-      <div className="flex-1 space-y-1">
-        <div className="flex justify-between items-start">
-          <p className="text-[10px] font-black uppercase tracking-widest text-brand">{product.category}</p>
-          {product.localNames && product.localNames[0] && product.localNames[0].toLowerCase() !== product.name.toLowerCase() && (
-            <span className="text-[9px] font-black bg-brand/5 text-brand px-2 py-0.5 rounded-md uppercase tracking-tighter">
-              {product.localNames[0]}
+      <div className="flex-1 min-h-0 flex flex-col gap-1 md:gap-2 px-0.5 md:px-1">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-1">
+          <p className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-slate-400 group-hover:text-brand transition-colors truncate">{product.category}</p>
+          {product.localNames && product.localNames[0] && (
+            <span className="text-[8px] md:text-[9px] font-bold text-slate-300 uppercase italic truncate">
+              aka {product.localNames[0]}
             </span>
           )}
         </div>
-        <h3 className="text-sm font-black text-dark tracking-tight uppercase line-clamp-1">{product.name}</h3>
-        <p className="text-[10px] font-medium text-gray-400 line-clamp-2 leading-relaxed">{product.description}</p>
+        <h3 className="text-sm md:text-base font-display font-bold text-dark tracking-tight uppercase line-clamp-2 md:line-clamp-1 leading-tight md:leading-normal">{product.name}</h3>
+        <p className="hidden md:line-clamp-2 text-[10px] font-medium text-slate-400 leading-relaxed">{product.description}</p>
       </div>
 
-      <div className="flex items-center justify-between mt-2">
+      <div className="flex items-center justify-between mt-auto pt-3 md:pt-4 border-t border-slate-50 transition-colors group-hover:border-brand/10">
         <div className="flex flex-col">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Quantity</span>
-          <span className="text-xs font-black text-dark tabular-nums">{product.unit || 'kg'} container</span>
+          <span className="text-[8px] md:text-[10px] font-bold text-slate-300 uppercase tracking-widest">Pricing</span>
+          <span className="text-xs md:text-sm font-display font-bold text-dark tabular-nums tracking-tight">{product.unit || 'kg'} Measure</span>
         </div>
 
         {quantity > 0 && onUpdateQuantity ? (
-          <div className="flex items-center gap-3 bg-brand/10 rounded-xl p-1 px-2 border border-brand/20">
+          <div className="flex items-center gap-1.5 md:gap-4 bg-brand text-white rounded-xl md:rounded-2xl p-1 px-2 md:px-3 shadow-lg shadow-brand/20">
              <button 
                onClick={() => onUpdateQuantity(product.id, -1)}
-               className="w-6 h-6 flex items-center justify-center text-brand hover:scale-110 transition-transform"
+               className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center hover:scale-125 transition-transform"
              >
-               <Minus className="w-4 h-4" />
+               <Minus className="w-3.5 h-3.5 md:w-4 md:h-4" />
              </button>
-             <span className="text-sm font-black text-brand tabular-nums">{quantity}</span>
+             <span className="text-xs md:text-sm font-bold tabular-nums min-w-[15px] md:min-w-[20px] text-center">{quantity}</span>
              <button 
                onClick={() => onUpdateQuantity(product.id, 1)}
-               className="w-6 h-6 flex items-center justify-center text-brand hover:scale-110 transition-transform"
+               className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center hover:scale-125 transition-transform"
              >
-               <Plus className="w-4 h-4" />
+               <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" />
              </button>
           </div>
         ) : (
           <button 
             onClick={() => onAddToCart(product)}
-            className="w-10 h-10 bg-brand text-white rounded-xl flex items-center justify-center shadow-lg shadow-brand/20 hover:scale-110 transition-transform active:scale-95"
+            className="h-10 md:h-12 px-4 md:px-6 bg-slate-900 text-white rounded-xl md:rounded-2xl flex items-center justify-center gap-1.5 md:gap-2 shadow-xl hover:bg-brand hover:scale-105 transition-all active:scale-95 group/btn"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-3.5 h-3.5 md:w-4 md:h-4 group-hover/btn:rotate-90 transition-transform" />
+            <span className="text-[9px] md:text-[11px] font-bold uppercase tracking-widest">Add</span>
           </button>
         )}
       </div>

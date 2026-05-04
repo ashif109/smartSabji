@@ -4,7 +4,7 @@ import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { motion } from 'motion/react';
 import { Leaf, AlertCircle, Loader2 } from 'lucide-react';
 import { UserRole } from '../types';
-import { cn } from '../lib/utils';
+import { cn, handleFirestoreError, OperationType } from '../lib/utils';
 
 interface AuthProps {
   onSuccess: (user: any) => void;
@@ -21,17 +21,26 @@ const Auth: React.FC<AuthProps> = ({ onSuccess }) => {
     try {
       const result = await signInWithGoogle();
       const userRef = doc(db, 'users', result.user.uid);
-      const userSnap = await getDoc(userRef);
+      let userSnap;
+      try {
+        userSnap = await getDoc(userRef);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.GET, `users/${result.user.uid}`, auth);
+      }
 
-      if (!userSnap.exists()) {
-        await setDoc(userRef, {
-          id: result.user.uid,
-          email: result.user.email,
-          fullName: result.user.displayName,
-          role: role,
-          superCoins: 0,
-          createdAt: new Date().toISOString()
-        });
+      if (userSnap && !userSnap.exists()) {
+        try {
+          await setDoc(userRef, {
+            id: result.user.uid,
+            email: result.user.email,
+            fullName: result.user.displayName,
+            role: role,
+            superCoins: 0,
+            createdAt: new Date().toISOString()
+          });
+        } catch (err) {
+          handleFirestoreError(err, OperationType.CREATE, `users/${result.user.uid}`, auth);
+        }
       }
       onSuccess(result.user);
     } catch (err: any) {
@@ -57,7 +66,7 @@ const Auth: React.FC<AuthProps> = ({ onSuccess }) => {
           <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mb-12 shadow-xl">
              <Leaf className="w-12 h-12 text-brand" />
           </div>
-          <h1 className="text-[8vw] text-white leading-[0.85] tracking-tighter font-black uppercase italic">Smart<br/><span className="text-white/40">Sabji</span></h1>
+          <h1 className="text-[8vw] text-white leading-[0.85] tracking-tighter font-black uppercase italic">Vegie<br/><span className="text-white/40">Route</span></h1>
           <p className="text-white/80 font-black text-xl uppercase tracking-tighter mt-8">Nourishing Neighbors in 30 Mins.</p>
         </div>
         <div className="space-y-6 relative z-10">
@@ -77,7 +86,7 @@ const Auth: React.FC<AuthProps> = ({ onSuccess }) => {
              <div className="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-brand/20">
                 <Leaf className="w-10 h-10 text-white" />
              </div>
-             <h1 className="text-4xl text-gray-800 tracking-tighter uppercase font-black italic">Smart <span className="text-brand">Sabji</span></h1>
+             <h1 className="text-4xl text-gray-800 tracking-tighter uppercase font-black italic">Vegie <span className="text-brand">Route</span></h1>
           </div>
 
           <p className="text-brand font-black text-[10px] sm:text-xs uppercase tracking-[0.3em] mb-4">Start your journey</p>
