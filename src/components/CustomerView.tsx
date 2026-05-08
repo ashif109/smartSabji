@@ -69,6 +69,37 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
     return unsubscribe;
   }, [user.id]);
 
+  // Initial Location Setup
+  useEffect(() => {
+    if (!selectedLocation) {
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            setSelectedLocation({
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+              address: "Sector A-12, Green Hub Node"
+            });
+          },
+          () => {
+            // Fallback to default if blocked
+            setSelectedLocation({
+              lat: 19.0760,
+              lng: 72.8777,
+              address: "Sector A-12, Green Hub Node (Default)"
+            });
+          }
+        );
+      } else {
+        setSelectedLocation({
+          lat: 19.0760,
+          lng: 72.8777,
+          address: "Sector A-12, Green Hub Node (Default)"
+        });
+      }
+    }
+  }, []);
+
   const categories: (VegetableCategory | 'All')[] = ['All', 'Daily', 'Leafy', 'Roots', 'Fruits', 'Exotic', 'Herbs'];
 
   const addToCart = (product: Product) => {
@@ -138,7 +169,21 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
           </div>
           <div>
             <h1 className="text-xl font-display font-black text-slate-900 tracking-tight uppercase leading-none italic">Vegie<span className="text-brand">Route</span></h1>
-            <button className="flex items-center gap-1 mt-1 group">
+            <button 
+              onClick={() => {
+                setSelectedLocation(null); // Trigger re-detection
+                if ('geolocation' in navigator) {
+                  navigator.geolocation.getCurrentPosition((pos) => {
+                    setSelectedLocation({
+                      lat: pos.coords.latitude,
+                      lng: pos.coords.longitude,
+                      address: "Sector A-12, Green Hub Node"
+                    });
+                  });
+                }
+              }}
+              className="flex items-center gap-1 mt-1 group"
+            >
                <MapPin className="w-3 h-3 text-brand" />
                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest line-clamp-1 max-w-[150px] group-hover:text-brand transition-colors">
                   {selectedLocation?.address || "Detecting Node..."}

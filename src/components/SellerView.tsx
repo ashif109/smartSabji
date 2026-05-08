@@ -74,18 +74,33 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
 
     if (seller.isOnline) {
       const performUpdate = (lat: number, lng: number) => {
+        // Debounce: Only update if moved significantly or enough time passed
+        const lastLat = (window as any)._lastLat || 0;
+        const lastLng = (window as any)._lastLng || 0;
+        const lastUpdateTime = (window as any)._lastLocationUpdate || 0;
+        
+        const distMoved = getDistance(lat, lng, lastLat, lastLng);
+        const now = Date.now();
+
+        if (distMoved < 0.01 && (now - lastUpdateTime < 60000)) {
+          return; // Skip if less than 10m and less than 1 min
+        }
+
         updateDoc(doc(db, 'users', seller.id), {
           currentLocation: {
             lat,
             lng,
             updatedAt: new Date().toISOString()
           }
+        }).then(() => {
+          (window as any)._lastLat = lat;
+          (window as any)._lastLng = lng;
+          (window as any)._lastLocationUpdate = Date.now();
         }).catch(err => {
           if (err.code !== 'permission-denied') {
             console.error("Location sync interrupted", err);
           }
         });
-        (window as any)._lastLocationUpdate = Date.now();
       };
 
       if ('geolocation' in navigator) {
@@ -231,11 +246,10 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
     }
   };
 
-  const completeOrder = async (orderId: string, amount: number) => {
+  const completeOrder = async (orderId: string, _amount: number) => {
     try {
       await runTransaction(db, async (transaction) => {
         const orderRef = doc(db, 'orders', orderId);
-        const sellerRef = doc(db, 'users', seller.id);
         
         const orderSnap = await transaction.get(orderRef);
         if (!orderSnap.exists()) throw new Error("Order not found");
@@ -243,14 +257,11 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
         const customerId = orderSnap.data().customerId;
         const customerRef = doc(db, 'users', customerId);
         
-        const [sellerSnap, customerSnap] = await Promise.all([
-          transaction.get(sellerRef),
-          transaction.get(customerRef)
-        ]);
+        // Skip fetching sellerRef in transaction to avoid write-write conflicts with location updates
+        // The security rules will still verify the seller's role via get() but it's more stable
+        const customerSnap = await transaction.get(customerRef);
 
-        if (!sellerSnap.exists()) throw new Error("Operator profile not found");
-        
-        const earnedSuperCoins = Math.floor(Math.random() * 3) + 5; // 5, 6, or 7 coins for better startup engagement
+        const earnedSuperCoins = Math.floor(Math.random() * 3) + 5; 
 
         transaction.update(orderRef, { 
           status: 'delivered',
@@ -259,7 +270,6 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
           updatedAt: new Date().toISOString()
         });
         
-        // Award directly to customer profile for real-time gratification
         transaction.update(customerRef, {
           superCoins: (customerSnap.data()?.superCoins || 0) + earnedSuperCoins
         });
