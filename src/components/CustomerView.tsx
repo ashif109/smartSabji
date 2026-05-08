@@ -93,8 +93,8 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
 
   // Initial Location Setup
   useEffect(() => {
-    if (!selectedLocation && !isLocationConfirmed) {
-      setShowLocationModal(true);
+    // We no longer auto-show the modal on load
+    if (!selectedLocation) {
       if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
@@ -119,10 +119,6 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
   const categories: (VegetableCategory | 'All')[] = ['All', 'Daily', 'Leafy', 'Roots', 'Fruits', 'Exotic', 'Herbs'];
 
   const addToCart = (product: Product) => {
-    if (!isLocationConfirmed) {
-      setShowLocationModal(true);
-      return;
-    }
     setCart(prev => CartService.addToCart(prev, product));
   };
 
@@ -246,7 +242,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
             >
                <MapPin className="w-3 h-3 text-brand" />
                <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] line-clamp-1 max-w-[140px] md:max-w-[180px]">
-                  {isLocationConfirmed ? selectedLocation?.address : "Detecting Node..."}
+                  {isLocationConfirmed ? selectedLocation?.address : "TAP TO SELECT NODE"}
                </span>
             </button>
           </div>

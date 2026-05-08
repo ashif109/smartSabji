@@ -18,6 +18,7 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
   const [isTrialActive, setIsTrialActive] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showQRModal, setShowQRModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -263,6 +264,7 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
   };
 
   const completeOrder = async (orderId: string, _amount: number) => {
+    setLoading(true);
     try {
       await runTransaction(db, async (transaction) => {
         const orderRef = doc(db, 'orders', orderId);
@@ -270,8 +272,11 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
         const orderSnap = await transaction.get(orderRef);
         if (!orderSnap.exists()) throw new Error("Order not found");
         
-        const customerId = orderSnap.data().customerId;
-        const earnedSuperCoins = Math.floor(Math.random() * 5) + 2; // Min 2, max 6
+        const data = orderSnap.data();
+        const customerId = data.customerId;
+        if (!customerId) throw new Error("Customer identity lost in transmission");
+
+        const earnedSuperCoins = Math.floor(Math.random() * 5) + 2; 
 
         // 1. Update order status
         transaction.update(orderRef, { 
@@ -289,8 +294,11 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
           createdAt: new Date().toISOString()
         });
       });
+      alert("Order delivered! Rewards transmitted to customer.");
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, `orders/${orderId}`, auth);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -419,11 +427,74 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
 
   return (
     <div className="min-h-screen bg-[#F4F7F5] text-dark pb-32 overflow-x-hidden relative font-sans">
+      <AnimatePresence>
+        {showQRModal && (
+          <div className="fixed inset-0 z-[160] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowQRModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-sm bg-white rounded-[40px] shadow-2xl overflow-hidden p-10 flex flex-col items-center gap-8 text-center"
+            >
+              <button 
+                onClick={() => setShowQRModal(false)}
+                className="absolute top-6 right-6 w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="space-y-2">
+                <p className="text-brand text-[10px] font-black uppercase tracking-[0.4em]">Payment Terminal</p>
+                <h3 className="text-3xl font-display font-black tracking-tighter uppercase italic text-slate-900">Receive Payment</h3>
+              </div>
+
+              <div className="bg-slate-50 p-6 rounded-[32px] border border-slate-100 shadow-inner group">
+                {seller.paymentInfo?.qrCodeUrl ? (
+                  <img 
+                    src={seller.paymentInfo.qrCodeUrl} 
+                    alt="Payment QR" 
+                    className="w-48 h-48 object-contain"
+                  />
+                ) : (
+                  <div className="w-48 h-48 flex flex-col items-center justify-center text-slate-300 gap-4">
+                    <QrCode className="w-16 h-16 opacity-20" />
+                    <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed px-4">QR Code not configured in profile settings</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-[11px] font-black uppercase tracking-widest text-slate-900">{seller.paymentInfo?.upiId || "UPI ID Not Set"}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">{seller.businessDetails?.shopName || "Merchant Node"}</p>
+              </div>
+
+              <p className="text-[10px] font-bold text-slate-400 leading-relaxed max-w-[240px]">
+                Ask the customer to scan this QR with any UPI app to complete the transaction securely.
+              </p>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Top Header */}
       <header className="glass-premium px-4 md:px-8 py-4 md:py-6 flex justify-between items-center sticky top-0 z-50 border-b border-slate-100">
         <div className="flex items-center gap-3 md:gap-4">
-          <div className="w-10 h-10 md:w-12 md:h-12 bg-dark rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-xl">
+          <div className="w-10 h-10 md:w-12 md:h-12 bg-dark rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-xl relative group">
             <Sprout className="w-5 h-5 md:w-6 md:h-6 text-brand" />
+            <button 
+              onClick={() => setShowQRModal(true)}
+              className="absolute -right-2 -bottom-2 w-6 h-6 bg-brand rounded-lg flex items-center justify-center text-white shadow-lg border-2 border-white hover:scale-110 transition-transform active:scale-95"
+              title="Show Payment QR"
+            >
+              <QrCode className="w-3.5 h-3.5" />
+            </button>
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-display font-black text-slate-900 tracking-tighter uppercase leading-none italic">
@@ -599,18 +670,20 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
                         <div className="flex gap-4">
                           {order.status === 'accepted' ? (
                             <button 
+                              disabled={loading}
                               onClick={() => startDeparture(order.id)}
-                              className="btn-premium flex-1 py-5 text-xs gap-2 !bg-slate-900 border-black"
+                              className="btn-premium flex-1 py-5 text-xs gap-2 !bg-slate-900 border-black disabled:opacity-50"
                             >
-                              <Play className="w-4 h-4 fill-brand text-brand" />
+                              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-brand text-brand" />}
                               Start Delivery
                             </button>
                           ) : (
                             <button 
+                              disabled={loading}
                               onClick={() => completeOrder(order.id, order.totalAmount)}
-                              className="btn-premium flex-1 py-5 text-xs"
+                              className="btn-premium flex-1 py-5 text-xs disabled:opacity-50"
                             >
-                              Mark Delivered
+                              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Mark Delivered"}
                             </button>
                           )}
                           <button 
