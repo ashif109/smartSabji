@@ -198,42 +198,42 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 pb-40 overflow-x-hidden relative font-sans">
       {/* Dynamic Header */}
-      <header className="glass-premium px-4 md:px-8 py-5 flex justify-between items-center sticky top-0 z-50 transition-all border-b border-slate-100">
-        <div className="flex items-center gap-4">
+      <header className="glass-premium px-4 md:px-8 py-4 md:py-5 flex justify-between items-center sticky top-0 z-50 transition-all border-b border-slate-100">
+        <div className="flex items-center gap-3 md:gap-4">
           <motion.div 
             whileHover={{ rotate: 15 }}
-            className="w-12 h-12 bg-brand rounded-2xl flex items-center justify-center text-white shadow-brand-glow"
+            className="w-10 h-10 md:w-12 md:h-12 bg-brand rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-brand-glow"
           >
-            <Sprout className="w-7 h-7" />
+            <Sprout className="w-5 h-5 md:w-7 md:h-7" />
           </motion.div>
           <div>
-            <h1 className="text-2xl font-display font-black text-slate-900 tracking-tighter uppercase leading-none drop-shadow-sm">
+            <h1 className="text-xl md:text-2xl font-display font-black text-slate-900 tracking-tighter uppercase leading-none drop-shadow-sm">
               Vegie<span className="text-brand">Route</span>
             </h1>
             <button 
               onClick={() => setShowLocationModal(true)}
-              className="flex items-center gap-1.5 mt-1 transition-all hover:opacity-70"
+              className="flex items-center gap-1 mt-0.5 md:mt-1 transition-all hover:opacity-70"
             >
-               <MapPin className="w-3.5 h-3.5 text-brand" />
-               <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] line-clamp-1 max-w-[180px]">
-                  {isLocationConfirmed ? selectedLocation?.address : "Detecting Delivery Node..."}
+               <MapPin className="w-3 h-3 text-brand" />
+               <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] line-clamp-1 max-w-[140px] md:max-w-[180px]">
+                  {isLocationConfirmed ? selectedLocation?.address : "Detecting Node..."}
                </span>
             </button>
           </div>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
            <button 
              onClick={() => setShowSearchModal(true)}
-             className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400 hover:text-brand hover:border-brand/20 transition-all shadow-sm"
+             className="w-10 h-10 md:w-12 md:h-12 bg-slate-50 border border-slate-100 rounded-xl md:rounded-2xl flex items-center justify-center text-slate-400 hover:text-brand hover:border-brand/20 transition-all shadow-sm"
            >
-              <Search className="w-5 h-5" />
+              <Search className="w-4 h-4 md:w-5 md:h-5" />
            </button>
            <button 
              onClick={() => setActiveTab('profile')} 
-             className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400 hover:text-brand hover:border-brand/20 transition-all shadow-sm"
+             className="w-10 h-10 md:w-12 md:h-12 bg-slate-50 border border-slate-100 rounded-xl md:rounded-2xl flex items-center justify-center text-slate-400 hover:text-brand hover:border-brand/20 transition-all shadow-sm"
            >
-              <User className="w-5 h-5" />
+              <User className="w-4 h-4 md:w-5 md:h-5" />
            </button>
         </div>
       </header>
@@ -416,33 +416,33 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
                <motion.div 
                  initial={{ opacity: 0, x: -30 }}
                  animate={{ opacity: 1, x: 0 }}
-                 className="space-y-8"
+                 className="space-y-6 md:space-y-8"
                >
-                  <div className="inline-flex items-center gap-3 px-4 py-2 bg-brand/10 rounded-full border border-brand/20">
-                     <span className="w-2 h-2 bg-brand rounded-full animate-ping" />
-                     <span className="text-[10px] font-black text-brand uppercase tracking-widest">Hyperlocal Node #04 Active</span>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand/10 rounded-full border border-brand/20">
+                     <span className="w-1.5 h-1.5 bg-brand rounded-full animate-ping" />
+                     <span className="text-[9px] font-black text-brand uppercase tracking-widest">Node #04 Active</span>
                   </div>
-                  <h2 className="text-6xl md:text-8xl font-display font-black tracking-tighter leading-[0.85] text-slate-900 uppercase italic">
+                  <h2 className="text-5xl md:text-8xl font-display font-black tracking-tighter leading-[0.85] text-slate-900 uppercase italic">
                     The Fresh <br />
                     <span className="text-brand">Protocol.</span>
                   </h2>
-                  <p className="text-slate-500 text-lg md:text-xl font-medium max-w-lg leading-relaxed">
+                  <p className="text-slate-500 text-base md:text-xl font-medium max-w-lg leading-relaxed">
                     Direct from farmer nodes to your doorstep in 20 minutes. Zero middleman. 100% transparency.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4">
-                     <button className="btn-premium px-12 group">
+                     <button className="btn-premium px-8 md:px-12 group py-4 md:py-5">
                         <span>Harvest Map</span>
-                        <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                        <ArrowRight className="w-5 h-5 md:w-6 md:h-6 group-hover:translate-x-1 transition-transform" />
                      </button>
-                     <div className="flex -space-x-3 items-center px-4">
+                     <div className="flex -space-x-2 items-center px-2">
                         {[1,2,3,4].map(i => (
-                          <div key={i} className="w-10 h-10 rounded-full border-2 border-white bg-slate-100 overflow-hidden shadow-lg">
+                          <div key={i} className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-white bg-slate-100 overflow-hidden shadow-lg">
                             <img src={`https://i.pravatar.cc/100?img=${i+40}`} alt="user" className="w-full h-full object-cover" />
                           </div>
                         ))}
-                        <div className="pl-6">
-                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Trust Index</p>
-                           <p className="text-sm font-black text-slate-900 italic tracking-tighter">4.9/5 RATING</p>
+                        <div className="pl-4">
+                           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none text-center">Trust Index</p>
+                           <p className="text-xs font-black text-slate-900 italic tracking-tighter">4.9/5 RATING</p>
                         </div>
                      </div>
                   </div>
@@ -498,38 +498,38 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
                initial={{ opacity: 0, y: 20 }}
                whileInView={{ opacity: 1, y: 0 }}
                onClick={() => setActiveTab('inbox')}
-               className="bg-slate-900 rounded-[40px] p-10 text-white flex flex-col md:flex-row items-center justify-between gap-10 overflow-hidden relative group cursor-pointer shadow-2xl shadow-slate-900/20"
+               className="bg-slate-900 rounded-[32px] md:rounded-[40px] p-6 md:p-10 text-white flex flex-col md:flex-row items-center justify-between gap-8 md:gap-10 overflow-hidden relative group cursor-pointer shadow-2xl shadow-slate-900/20"
             >
                <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,_rgba(16,185,129,0.15)_0%,_transparent_50%)]" />
-               <div className="space-y-6 relative z-10 flex-1">
-                  <div className="w-fit bg-brand/20 text-brand px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-brand/20">
+               <div className="space-y-4 md:space-y-6 relative z-10 flex-1 w-full text-center md:text-left">
+                  <div className="w-fit bg-brand/20 text-brand px-3 md:px-4 py-1 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] border border-brand/20 mx-auto md:mx-0">
                      Proprietary Chef-Mind v2
                   </div>
-                  <h3 className="text-4xl md:text-6xl font-display font-black tracking-tighter uppercase italic leading-[0.9]">
+                  <h3 className="text-3xl md:text-6xl font-display font-black tracking-tighter uppercase italic leading-[0.9]">
                     Stuck with <br /> <span className="text-brand">Kitchin-Logic?</span>
                   </h3>
-                  <p className="text-slate-400 text-sm font-medium max-w-sm tracking-wide leading-relaxed">
+                  <p className="text-slate-400 text-xs md:text-sm font-medium max-w-sm tracking-wide leading-relaxed mx-auto md:mx-0">
                     Our AI Culinary Assistant analyzes your ingredients and recommends the perfect harvest to add to your basket.
                   </p>
                   <button 
                     onClick={() => setActiveTab('inbox')}
-                    className="btn-premium group shadow-none border border-brand/40"
+                    className="btn-premium group shadow-none border border-brand/40 px-8 py-4 mx-auto md:mx-0"
                   >
                      <span>Engage AI Assistant</span>
-                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </button>
                </div>
-               <div className="w-48 h-48 md:w-80 md:h-80 bg-white/5 rounded-[48px] backdrop-blur-xl border border-white/10 flex items-center justify-center transform rotate-6 hover:rotate-0 transition-transform duration-700 shadow-2xl group-hover:bg-brand/10">
-                  <ChefHat className="w-24 md:w-40 h-24 md:h-40 text-brand opacity-40 group-hover:opacity-100 transition-opacity" />
+               <div className="w-32 h-32 md:w-80 md:h-80 bg-white/5 rounded-[32px] md:rounded-[48px] backdrop-blur-xl border border-white/10 flex items-center justify-center transform rotate-6 hover:rotate-0 transition-transform duration-700 shadow-2xl group-hover:bg-brand/10">
+                  <ChefHat className="w-16 md:w-40 h-16 md:h-40 text-brand opacity-40 group-hover:opacity-100 transition-opacity" />
                </div>
             </motion.div>
 
             {/* Enhanced Categories Grid */}
-            <div className="space-y-10">
+            <div className="space-y-6 md:space-y-10">
                <div className="flex justify-between items-end">
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                      <p className="text-brand text-[10px] font-black uppercase tracking-[0.4em]">Selection Modules</p>
-                     <h3 className="text-4xl font-display font-black tracking-tighter uppercase italic text-slate-900">The Catalog</h3>
+                     <h3 className="text-3xl md:text-4xl font-display font-black tracking-tighter uppercase italic text-slate-900">The Catalog</h3>
                   </div>
                   <div className="hidden md:flex gap-2">
                      <div className="w-2.5 h-2.5 bg-brand rounded-full" />
@@ -537,29 +537,29 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
                      <div className="w-2.5 h-2.5 bg-slate-200 rounded-full" />
                   </div>
                </div>
-               <div className="flex gap-4 overflow-x-auto pb-8 scrollbar-hide">
+               <div className="flex gap-4 md:gap-6 overflow-x-auto pb-4 md:pb-8 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
                   {categories.map(cat => (
                     <button 
                       key={cat}
                       onClick={() => setSelectedCategory(cat)}
                       className={cn(
                         "group relative shrink-0",
-                        selectedCategory === cat ? "scale-110 z-10" : "scale-100 opacity-60 hover:opacity-100"
+                        selectedCategory === cat ? "scale-105 md:scale-110 z-10" : "scale-100 opacity-60 hover:opacity-100"
                       )}
                     >
                       <div className={cn(
-                        "w-24 h-24 md:w-32 md:h-32 rounded-full flex flex-col items-center justify-center gap-2 border-2 transition-all duration-500 shadow-premium",
+                        "w-20 h-20 md:w-32 md:h-32 rounded-full flex flex-col items-center justify-center gap-1 md:gap-2 border-2 transition-all duration-500 shadow-premium",
                         selectedCategory === cat 
                           ? "bg-brand border-brand text-white shadow-brand-glow" 
                           : "bg-white border-slate-100 text-slate-500 hover:border-brand/40"
                       )}>
-                        <Sprout className={cn("w-6 h-6 md:w-8 md:h-8", selectedCategory === cat ? "text-white" : "text-brand")} />
-                        <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">{cat}</span>
+                        <Sprout className={cn("w-5 h-5 md:w-8 md:h-8", selectedCategory === cat ? "text-white" : "text-brand")} />
+                        <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest">{cat}</span>
                       </div>
                       {selectedCategory === cat && (
                          <motion.div 
                            layoutId="cat-indicator"
-                           className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-2 h-2 bg-brand rounded-full shadow-brand-glow"
+                           className="absolute -bottom-2 md:-bottom-3 left-1/2 -translate-x-1/2 w-1.5 md:w-2 h-1.5 md:h-2 bg-brand rounded-full shadow-brand-glow"
                          />
                       )}
                     </button>
@@ -760,25 +760,25 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-24 left-4 right-4 z-40"
+            className="fixed bottom-24 md:bottom-28 left-4 right-4 z-40 max-w-xl mx-auto"
           >
             <div 
               onClick={() => setShowCart(true)}
-              className="bg-brand text-white p-4 md:p-5 rounded-2xl md:rounded-3xl flex items-center justify-between shadow-2xl shadow-brand/40 cursor-pointer group hover:scale-[1.02] transition-transform active:scale-95 border-b-4 border-b-brand-dark/30"
+              className="bg-brand text-white p-3 md:p-5 rounded-2xl md:rounded-3xl flex items-center justify-between shadow-2xl shadow-brand/40 cursor-pointer group hover:scale-[1.02] transition-transform active:scale-95 border-b-4 border-b-brand-dark/30"
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 md:gap-4">
                 <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 rounded-xl flex items-center justify-center">
                   <ShoppingBag className="w-5 h-5 md:w-6 md:h-6" />
                 </div>
                 <div>
-                  <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] opacity-80">View Basket</p>
+                  <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] opacity-80">View Basket</p>
                   <p className="text-sm md:text-lg font-black tracking-tight leading-none">
                     {cart.reduce((acc, curr) => acc + curr.quantity, 0)} Items <span className="opacity-40">•</span> ₹{totalInfo.total}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 font-black text-[10px] md:text-[11px] uppercase tracking-widest">
-                <span>Checkout</span>
+              <div className="flex items-center gap-2 font-black text-[9px] md:text-[11px] uppercase tracking-widest">
+                <span className="hidden xs:inline">Checkout</span>
                 <ChevronRight className="w-4 h-4 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform" />
               </div>
             </div>

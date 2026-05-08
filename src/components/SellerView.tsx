@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { db, auth } from '../firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, runTransaction } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
-import { TrendingUp, Map, CheckCircle, Navigation, DollarSign, Package, Users, ShieldCheck, AlertCircle, Play, MoreVertical, Signal, MapPin, Activity, Clock, Loader2, Leaf, Sprout, Upload, X, Star, UserX } from 'lucide-react';
+import { TrendingUp, Map, CheckCircle, Navigation, DollarSign, Package, Users, ShieldCheck, AlertCircle, Play, MoreVertical, Signal, MapPin, Activity, Clock, Loader2, Leaf, Sprout, Upload, X, Star, UserX, LogOut, ShoppingBag, Settings, Store, Bell } from 'lucide-react';
 import { Order, SellerProfile } from '../types';
 import MapContainer from './MapContainer';
 import { cn, formatCurrency, handleFirestoreError, OperationType } from '../lib/utils';
@@ -423,41 +423,47 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
   return (
     <div className="min-h-screen bg-[#F4F7F5] text-dark pb-32 overflow-x-hidden relative font-sans">
       {/* Top Header */}
-      <div className="bg-white px-6 py-6 border-b border-gray-100 flex justify-between items-center sticky top-0 z-40">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center text-white">
-            <Sprout className="w-6 h-6" />
+      <header className="glass-premium px-4 md:px-8 py-4 md:py-6 flex justify-between items-center sticky top-0 z-50 border-b border-slate-100">
+        <div className="flex items-center gap-3 md:gap-4">
+          <div className="w-10 h-10 md:w-12 md:h-12 bg-dark rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-xl">
+            <Sprout className="w-5 h-5 md:w-6 md:h-6 text-brand" />
           </div>
-          <h1 className="text-2xl font-display font-black text-brand tracking-tighter uppercase leading-none">VegieRoute</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => auth.signOut()}
-            className="w-10 h-10 flex items-center justify-center bg-gray-50 border border-gray-100 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all shadow-sm"
-            title="Sign Out"
-          >
-            <UserX className="w-5 h-5" />
-          </button>
-          <button 
-            onClick={() => {
-              updateDoc(doc(db, 'users', seller.id), { isOnline: !seller.isOnline })
-                .catch(err => console.error("Status update failed", err));
-            }}
-            className={cn(
-              "flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm border",
-              seller.isOnline 
-                ? "bg-brand/10 text-brand border-brand/20" 
-                : "bg-red-50 text-red-500 border-red-100"
-            )}
-          >
-            <span className={cn("w-1.5 h-1.5 rounded-full", seller.isOnline ? "bg-brand animate-pulse" : "bg-red-500")} /> 
-            {seller.isOnline ? "ONLINE" : "OFFLINE"}
-          </button>
-          <div className="bg-gray-50 p-2 rounded-full">
-            <Users className="w-5 h-5 text-gray-400" />
+          <div>
+            <h1 className="text-xl md:text-2xl font-display font-black text-slate-900 tracking-tighter uppercase leading-none italic">
+              Seller<span className="text-brand">Hub</span>
+            </h1>
+            <div className="flex items-center gap-1.5 mt-0.5 md:mt-1">
+               <span className={cn("w-1.5 h-1.5 rounded-full", seller.isOnline ? "bg-brand animate-pulse" : "bg-red-500")} />
+               <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                 {seller.isOnline ? "OPERATOR ACTIVE" : "OPERATOR OFFLINE"}
+               </span>
+            </div>
           </div>
         </div>
-      </div>
+        
+        <div className="flex items-center gap-2 md:gap-4">
+           <button 
+             onClick={() => {
+               updateDoc(doc(db, 'users', seller.id), { isOnline: !seller.isOnline })
+                 .catch(err => console.error("Status update failed", err));
+             }}
+             className={cn(
+               "hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm border",
+               seller.isOnline 
+                 ? "bg-brand/10 text-brand border-brand/20" 
+                 : "bg-red-50 text-red-500 border-red-100"
+             )}
+           >
+             {seller.isOnline ? "ONLINE" : "OFFLINE"}
+           </button>
+           <button 
+             onClick={() => auth.signOut()}
+             className="w-10 h-10 md:w-12 md:h-12 bg-slate-50 border border-slate-100 rounded-xl md:rounded-2xl flex items-center justify-center text-slate-400 hover:text-red-500 transition-all shadow-sm"
+           >
+              <LogOut className="w-4 h-4 md:w-5 md:h-5" />
+           </button>
+        </div>
+      </header>
 
       <div className="max-w-7xl mx-auto p-4 sm:p-6 mb-8">
         <AnimatePresence mode="wait">
@@ -470,27 +476,30 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
               className="space-y-8"
             >
               {/* Stats Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                 <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm space-y-2">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Sales</p>
-                    <p className="text-2xl font-black text-gray-800 tabular-nums">{formatCurrency(totalEarnings)}</p>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                 <div className="bg-white border border-slate-100 rounded-[24px] md:rounded-[32px] p-6 shadow-sm space-y-2 group hover:shadow-xl transition-all">
+                    <TrendingUp className="w-5 h-5 text-brand mb-2" />
+                    <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Sales</p>
+                    <p className="text-xl md:text-3xl font-display font-black text-slate-800 tabular-nums uppercase italic">{formatCurrency(totalEarnings)}</p>
                  </div>
-                 <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm space-y-2">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Deliveries</p>
-                    <p className="text-2xl font-black text-gray-800 tabular-nums">
+                 <div className="bg-white border border-slate-100 rounded-[24px] md:rounded-[32px] p-6 shadow-sm space-y-2 group hover:shadow-xl transition-all">
+                    <ShoppingBag className="w-5 h-5 text-blue-500 mb-2" />
+                    <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Deliveries</p>
+                    <p className="text-xl md:text-3xl font-display font-black text-slate-800 tabular-nums uppercase italic">
                       {filteredOrders.filter(o => o.status === 'delivered').length}
                     </p>
                  </div>
-                 <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm space-y-2">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Market Score</p>
-                    <p className="text-2xl font-black text-brand tabular-nums">{seller.averageRating?.toFixed(1) || "5.0"}</p>
+                 <div className="bg-white border border-slate-100 rounded-[24px] md:rounded-[32px] p-6 shadow-sm space-y-2 group hover:shadow-xl transition-all">
+                    <Star className="w-5 h-5 text-amber-500 mb-2" />
+                    <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Market Score</p>
+                    <p className="text-xl md:text-3xl font-display font-black text-brand tabular-nums uppercase italic">{seller.averageRating?.toFixed(1) || "5.0"}</p>
                  </div>
                  <button 
                   onClick={() => setShowOnboarding(true)}
-                  className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm flex flex-col justify-center items-center gap-1 hover:border-brand transition-colors text-gray-400 hover:text-brand transition-all"
+                  className="bg-white border border-slate-100 rounded-[24px] md:rounded-[32px] p-6 shadow-sm flex flex-col justify-center items-center gap-2 hover:border-brand text-slate-400 hover:text-brand transition-all shadow-sm"
                  >
-                    <MoreVertical className="w-5 h-5" />
-                    <p className="text-[9px] font-black uppercase">Edit Shop</p>
+                    <Settings className="w-6 h-6" />
+                    <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest">Edit Node</p>
                  </button>
               </div>
 

@@ -76,17 +76,17 @@ const Auth: React.FC<AuthProps> = ({ onSuccess }) => {
       </div>
 
       {/* Right Pane - Form */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-8 bg-white uppercase">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 bg-white uppercase">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-w-md w-full pt-12 pb-20 sm:py-0"
+          className="max-w-md w-full pt-8 pb-16 sm:py-0"
         >
-          <div className="md:hidden mb-12 text-center">
-             <div className="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-brand/20">
-                <Leaf className="w-10 h-10 text-white" />
+          <div className="md:hidden mb-8 text-center">
+             <div className="w-14 h-14 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-brand/20">
+                <Leaf className="w-8 h-8 text-white" />
              </div>
-             <h1 className="text-4xl text-gray-800 tracking-tighter uppercase font-black italic">Vegie <span className="text-brand">Route</span></h1>
+             <h1 className="text-3xl text-gray-800 tracking-tighter uppercase font-black italic">Vegie <span className="text-brand">Route</span></h1>
           </div>
 
           <p className="text-brand font-black text-[10px] sm:text-xs uppercase tracking-[0.4em] mb-4">Hyperlocal Harvest</p>
