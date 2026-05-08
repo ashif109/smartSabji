@@ -44,8 +44,13 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
     const unsubPending = onSnapshot(qPending, (snap) => {
       const pendingData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
       setOrders(prev => {
-        const otherThanPending = prev.filter(o => o.status !== 'pending');
-        return [...otherThanPending, ...pendingData].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+        const merged = [...prev];
+        pendingData.forEach(p => {
+          const idx = merged.findIndex(o => o.id === p.id);
+          if (idx !== -1) merged[idx] = p;
+          else merged.push(p);
+        });
+        return merged;
       });
     }, (error) => {
       if (error.code === 'permission-denied') {
@@ -58,8 +63,13 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
     const unsubAssigned = onSnapshot(qAssigned, (snap) => {
       const assignedData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
       setOrders(prev => {
-        const otherThanAssigned = prev.filter(o => o.sellerId !== seller.id);
-        return [...otherThanAssigned, ...assignedData].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+        const merged = [...prev];
+        assignedData.forEach(p => {
+          const idx = merged.findIndex(o => o.id === p.id);
+          if (idx !== -1) merged[idx] = p;
+          else merged.push(p);
+        });
+        return merged;
       });
     }, (error) => {
       if (error.code === 'permission-denied') {
@@ -152,7 +162,7 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
     return orders.filter(order => {
       if (!seller.currentLocation || order.sellerId === seller.id) return true; // Keep orders already assigned to this seller
       const dist = getDistance(seller.currentLocation.lat, seller.currentLocation.lng, order.location.lat, order.location.lng);
-      return dist <= 6;
+      return dist <= 12; // Increased to 12km to be safer for testing
     });
   }, [orders, seller.currentLocation, seller.id]);
 
@@ -160,43 +170,49 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
     const activeOrders = filteredOrders.filter(o => o.status === 'accepted' || o.status === 'ongoing');
     const pendingOrders = filteredOrders.filter(o => o.status === 'pending');
     
+    // We prioritize accepted/ongoing orders as they are committed deliveries
+    // But we look for high-value signals nearby to pick up along the way
     const targets = [...activeOrders, ...pendingOrders];
     if (targets.length === 0) return [];
     
     let currentPos = seller.currentLocation || { lat: 28.6139, lng: 77.2090 };
     const remaining = [...targets];
-    const optimized: (Order)[] = [];
+    const optimized: Order[] = [];
     
     const now = Date.now();
 
     while (remaining.length > 0) {
       let nextBestIdx = 0;
-      let maxScore = -Infinity; // Higher is better
+      let maxScore = -Infinity;
       
       for (let i = 0; i < remaining.length; i++) {
         const target = remaining[i];
         const dist = getDistance(currentPos.lat, currentPos.lng, target.location.lat, target.location.lng);
         
-        // Timing weight: Older orders get priority
-        const ageInMs = target.createdAt ? (now - new Date(target.createdAt).getTime()) : 0;
-        const ageWeight = (ageInMs / 60000) * 0.1; // +0.1 score per minute old
+        // 1. Distance Penalty (Closer is fundamentally better)
+        // 1km = -5 points (scaled for impact)
+        const distScore = 15 / (dist + 0.5); 
 
-        // Density weight: How many other targets are near this one?
+        // 2. Timing Urgency (Age)
+        const ageInMin = target.createdAt ? (now - new Date(target.createdAt).getTime()) / 60000 : 0;
+        const urgencyScore = Math.min(ageInMin * 0.2, 10); // Max 10 points for being very old
+
+        // 3. Strategic Density (Neighbors)
         const neighbors = remaining.filter((other, idx) => {
           if (idx === i) return false;
-          return getDistance(target.location.lat, target.location.lng, other.location.lat, other.location.lng) < 0.5; // within 500m
+          return getDistance(target.location.lat, target.location.lng, other.location.lat, other.location.lng) < 0.6; // 600m
         });
-        const densityWeight = neighbors.length * 0.5; // +0.5 score per neighbor
+        const clusteringScore = neighbors.length * 1.5;
 
-        // Status weight: Active deliveries should probably be prioritized if they are close
-        const statusWeight = (target.status === 'accepted' || target.status === 'ongoing') ? 1.0 : 0;
+        // 4. Commitment Status
+        let commitmentBonus = 0;
+        if (target.status === 'ongoing') commitmentBonus = 12; // Must finish current first
+        else if (target.status === 'accepted') commitmentBonus = 6;  // Priority over signals
 
-        // Score: Inverting distance (closer is better) + weights
-        // Scale distance to a comparable range. dist in km. 1km = -2 points roughly.
-        const score = (10 / (dist + 0.1)) + ageWeight + densityWeight + statusWeight;
+        const totalScore = distScore + urgencyScore + clusteringScore + commitmentBonus;
 
-        if (score > maxScore) {
-          maxScore = score;
+        if (totalScore > maxScore) {
+          maxScore = totalScore;
           nextBestIdx = i;
         }
       }
@@ -207,7 +223,7 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
     }
     
     return optimized;
-  }, [orders, seller.currentLocation]);
+  }, [filteredOrders, seller.currentLocation]);
 
   const mapPath = useMemo((): Array<[number, number]> => {
     if (!seller.currentLocation) return [];
@@ -706,59 +722,131 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
                exit={{ opacity: 0, y: -20 }}
                className="space-y-8"
             >
-              <div className="bg-white border border-gray-100 rounded-[48px] p-12 text-center space-y-6">
-                <div className="w-24 h-24 bg-brand/10 mx-auto rounded-[32px] flex items-center justify-center">
-                  <Navigation className="w-12 h-12 text-brand" />
+              {/* Intelligent Driver Interface */}
+              <div className="bg-dark rounded-[40px] p-8 sm:p-12 text-white relative overflow-hidden shadow-2xl">
+                <div className="absolute top-0 right-0 p-8 opacity-5">
+                   <Activity className="w-64 h-64" />
                 </div>
-                <div className="space-y-2">
-                  <h2 className="text-4xl font-black uppercase tracking-tighter leading-none">Drive Logic</h2>
-                  <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Manage active transport channels</p>
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-end gap-8">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2.5 h-2.5 bg-brand rounded-full animate-pulse" />
+                      <span className="text-[10px] font-black text-brand uppercase tracking-widest">Mission Protocol Active</span>
+                    </div>
+                    <h2 className="text-4xl sm:text-5xl font-black uppercase tracking-tighter leading-none italic">Drive<span className="text-brand">Mode</span></h2>
+                    <p className="text-white/50 text-sm font-medium max-w-sm uppercase tracking-wider">
+                      Optimization active for {getOptimizedRoute.length} sequence points.
+                    </p>
+                  </div>
+                  <div className="text-right flex flex-col items-end">
+                     <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Estimated Leg</p>
+                     <p className="text-4xl font-black text-white tabular-nums">~{Math.ceil(totalPathDistance * 3)} <span className="text-sm font-bold text-brand italic">MIN</span></p>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-6">
-                {filteredOrders.filter(o => o.status === 'accepted' || o.status === 'ongoing').length === 0 ? (
-                  <div className="bg-white border-2 border-dashed border-gray-100 rounded-[40px] p-24 text-center opacity-30">
-                    <p className="font-black uppercase tracking-[0.4em]">No Active Channels</p>
-                  </div>
-                ) : (
-                  filteredOrders.filter(o => o.status === 'accepted' || o.status === 'ongoing').map(order => (
-                    <div key={order.id} className="bg-white border border-gray-100 rounded-[40px] p-10 flex flex-col md:flex-row gap-10 items-center hover:shadow-xl transition-all">
-                      <div className="flex-1 space-y-6 text-center md:text-left">
-                        <div className="flex flex-col md:flex-row items-center gap-4">
-                           <span className="bg-brand text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">Active Drive</span>
-                           <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">{order.id.toUpperCase()}</p>
-                        </div>
-                        <div>
-                          <h4 className="text-3xl font-black uppercase tracking-tighter text-gray-800 leading-tight mb-2">{order.location.address}</h4>
-                          <p className="text-gray-500 font-bold text-sm uppercase tracking-wider">Payload: {order.items.map(i => i.name).join(', ')}</p>
-                        </div>
+              {/* Sequenced Route List */}
+              <div className="space-y-6">
+                <div className="flex justify-between items-center px-1">
+                   <h3 className="text-xl font-black uppercase tracking-tighter">Optimized Sequence</h3>
+                   <div className="flex items-center gap-2">
+                      <div className="px-3 py-1 bg-white border border-gray-100 rounded-lg text-[9px] font-black uppercase text-gray-500 tracking-widest">
+                        {totalPathDistance.toFixed(1)} KM TOTAL
                       </div>
-                      <div className="w-full md:w-auto flex flex-col gap-4">
-                         <div className="text-center md:text-right">
-                            <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Expected Yield</p>
-                            <p className="text-4xl font-black text-brand tabular-nums">{formatCurrency(order.totalAmount)}</p>
-                         </div>
-                         {order.status === 'accepted' ? (
-                           <button 
-                             onClick={() => startDeparture(order.id)}
-                             className="w-full md:w-56 bg-brand text-white py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-brand/90 transition-all shadow-lg flex items-center justify-center gap-2"
-                           >
-                             <Play className="w-3 h-3 fill-white" />
-                             Activate Transport
-                           </button>
-                         ) : (
-                           <button 
-                             onClick={() => completeOrder(order.id, order.totalAmount)}
-                             className="w-full md:w-56 bg-dark text-white py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-brand hover:text-white transition-all shadow-lg"
-                           >
-                             Finalize Payload
-                           </button>
-                         )}
-                      </div>
+                   </div>
+                </div>
+
+                <div className="space-y-4 relative">
+                  {/* Vertical Progress Line */}
+                  <div className="absolute left-10 top-0 bottom-0 w-0.5 bg-gray-100 hidden md:block" />
+
+                  {getOptimizedRoute.length === 0 ? (
+                    <div className="bg-white border-2 border-dashed border-gray-100 rounded-[40px] p-24 text-center opacity-30">
+                      <p className="font-black uppercase tracking-[0.4em]">No Optimized Paths Found</p>
                     </div>
-                  ))
-                )}
+                  ) : (
+                    getOptimizedRoute.map((order, index) => (
+                      <motion.div 
+                        key={order.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className={cn(
+                          "relative bg-white border rounded-[40px] p-8 flex flex-col md:flex-row gap-8 items-center transition-all",
+                          index === 0 ? "border-brand shadow-xl ring-4 ring-brand/5" : "border-gray-100 shadow-sm opacity-80"
+                        )}
+                      >
+                        {/* Sequence Badge */}
+                        <div className="hidden md:flex absolute left-8 top-1/2 -translate-x-full -translate-y-1/2 items-center justify-end pr-8">
+                           <div className={cn(
+                             "w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-black transition-colors bg-white",
+                             index === 0 ? "border-brand text-brand" : "border-gray-100 text-gray-300"
+                           )}>
+                             {index + 1}
+                           </div>
+                        </div>
+
+                        <div className="flex-1 space-y-4 w-full">
+                           <div className="flex items-center gap-3">
+                              <span className={cn(
+                                "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest",
+                                order.status === 'pending' ? "bg-amber-100 text-amber-600" : "bg-brand/10 text-brand"
+                              )}>
+                                {order.status === 'pending' ? 'PICKUP SIGNAL' : 'DELIVERY POINT'}
+                              </span>
+                              {index === 0 && <span className="bg-brand text-white px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter">NEXT STOP</span>}
+                           </div>
+                           <div>
+                              <h4 className="text-2xl font-black uppercase tracking-tighter text-gray-800 leading-none mb-1">{order.location.address}</h4>
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest italic">
+                                {order.status === 'pending' ? "Demand detection at this node" : "Assigned Payload Delivery"}
+                              </p>
+                           </div>
+                           <div className="flex flex-wrap gap-2">
+                             {order.items.map((i, idx) => (
+                               <span key={idx} className="bg-gray-50 px-3 py-1.5 rounded-xl text-[10px] font-bold text-gray-400 uppercase">
+                                 {i.name} × {i.quantity}
+                               </span>
+                             ))}
+                           </div>
+                        </div>
+
+                        <div className="w-full md:w-auto flex flex-col gap-3">
+                           {order.status === 'pending' ? (
+                             <button 
+                               onClick={() => acceptOrder(order.id)}
+                               className="w-full md:w-48 bg-gray-50 hover:bg-brand hover:text-white py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
+                             >
+                               Accept for Route
+                             </button>
+                           ) : order.status === 'accepted' ? (
+                             <button 
+                               onClick={() => startDeparture(order.id)}
+                               className="w-full md:w-48 bg-brand text-white py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all shadow-lg shadow-brand/20 flex items-center justify-center gap-2"
+                             >
+                               <Play className="w-3 h-3 fill-white" />
+                               Start Delivery
+                             </button>
+                           ) : (
+                             <button 
+                               onClick={() => completeOrder(order.id, order.totalAmount)}
+                               className="w-full md:w-48 bg-dark text-white py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-brand transition-all shadow-lg"
+                             >
+                               Complete Task
+                             </button>
+                           )}
+                           <button 
+                             onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${order.location.lat},${order.location.lng}`)}
+                             className="w-full py-3 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center gap-2 text-[8px] font-black uppercase tracking-widest text-gray-400 hover:text-brand transition-colors"
+                           >
+                             <Navigation className="w-3.5 h-3.5" />
+                             External Nav
+                           </button>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
+                </div>
               </div>
             </motion.div>
           )}

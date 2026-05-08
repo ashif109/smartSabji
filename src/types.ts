@@ -7,6 +7,7 @@ export interface UserProfile {
   role: UserRole;
   superCoins?: number;
   phoneNumber?: string;
+  subscriptionPlan?: string;
   subscriptionExpiry?: string;
   createdAt: string;
 }

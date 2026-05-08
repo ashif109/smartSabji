@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
-import { collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingBag, MapPin, Search, Sprout, User, ArrowRight, Clock, Signal, Plus, Minus, UserX, ShieldCheck, Loader2, ChefHat, Sparkles, ChevronRight, Zap } from 'lucide-react';
+import { ShoppingBag, MapPin, Search, Sprout, User, ArrowRight, Clock, Signal, Plus, Minus, UserX, ShieldCheck, Loader2, ChefHat, Sparkles, ChevronRight, Zap, Navigation, XCircle, CreditCard, Crown, Calendar } from 'lucide-react';
 import { Order, UserProfile, Product, VegetableCategory } from '../types';
 import { PRODUCTS } from '../constants';
 import { cn, handleFirestoreError, OperationType } from '../lib/utils';
@@ -10,6 +10,7 @@ import ProductCard from './ProductCard';
 import CartSidebar from './CartSidebar';
 import BottomNav from './BottomNav';
 import RecipeAssistant from './RecipeAssistant';
+import MapContainer from './MapContainer';
 import { CartService, CartItem } from '../services/CartService';
 
 interface CustomerViewProps {
@@ -21,6 +22,8 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
   const [cart, setCart] = useState<CartItem[]>(CartService.getCart());
   const [showCart, setShowCart] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{lat: number, lng: number, address: string} | null>(null);
+  const [isLocationConfirmed, setIsLocationConfirmed] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const [myOrders, setMyOrders] = useState<Order[]>([]);
   const [activeTab, setActiveTab] = useState<'market' | 'orders' | 'inbox' | 'profile'>('market');
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,18 +74,18 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
 
   // Initial Location Setup
   useEffect(() => {
-    if (!selectedLocation) {
+    if (!selectedLocation && !isLocationConfirmed) {
+      setShowLocationModal(true);
       if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
             setSelectedLocation({
               lat: pos.coords.latitude,
               lng: pos.coords.longitude,
-              address: "Sector A-12, Green Hub Node"
+              address: "Detecting address..."
             });
           },
           () => {
-            // Fallback to default if blocked
             setSelectedLocation({
               lat: 19.0760,
               lng: 72.8777,
@@ -90,12 +93,6 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
             });
           }
         );
-      } else {
-        setSelectedLocation({
-          lat: 19.0760,
-          lng: 72.8777,
-          address: "Sector A-12, Green Hub Node (Default)"
-        });
       }
     }
   }, []);
@@ -103,6 +100,10 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
   const categories: (VegetableCategory | 'All')[] = ['All', 'Daily', 'Leafy', 'Roots', 'Fruits', 'Exotic', 'Herbs'];
 
   const addToCart = (product: Product) => {
+    if (!isLocationConfirmed) {
+      setShowLocationModal(true);
+      return;
+    }
     setCart(prev => CartService.addToCart(prev, product));
   };
 
@@ -112,9 +113,27 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
 
   const totalInfo = CartService.getTotals(cart);
 
+  const upgradeSubscription = async (plan: string) => {
+    setLoading(true);
+    try {
+      const expiry = new Date();
+      expiry.setDate(expiry.getDate() + 30);
+      
+      await updateDoc(doc(db, 'users', user.id), {
+        subscriptionPlan: plan,
+        subscriptionExpiry: expiry.toISOString()
+      });
+      alert(`Upgraded to ${plan.toUpperCase()}! Your fresh route is now priority.`);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.UPDATE, `users/${user.id}`, auth);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const placeOrder = async () => {
-    if (!selectedLocation) {
-      alert("Please set a delivery location first.");
+    if (!selectedLocation || !isLocationConfirmed) {
+      setShowLocationModal(true);
       return;
     }
     
@@ -146,6 +165,22 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
     }
   };
 
+  const cancelOrder = async (orderId: string) => {
+    if (!window.confirm("Are you sure you want to cancel this order?")) return;
+    
+    setLoading(true);
+    try {
+      await updateDoc(doc(db, 'orders', orderId), {
+        status: 'cancelled',
+        updatedAt: new Date().toISOString()
+      });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.UPDATE, `orders/${orderId}`, auth);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredProducts = products.filter(p => {
     const rawQuery = searchQuery.toLowerCase().trim();
     if (!rawQuery) {
@@ -171,22 +206,13 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
             <h1 className="text-xl font-display font-black text-slate-900 tracking-tight uppercase leading-none italic">Vegie<span className="text-brand">Route</span></h1>
             <button 
               onClick={() => {
-                setSelectedLocation(null); // Trigger re-detection
-                if ('geolocation' in navigator) {
-                  navigator.geolocation.getCurrentPosition((pos) => {
-                    setSelectedLocation({
-                      lat: pos.coords.latitude,
-                      lng: pos.coords.longitude,
-                      address: "Sector A-12, Green Hub Node"
-                    });
-                  });
-                }
+                setShowLocationModal(true);
               }}
               className="flex items-center gap-1 mt-1 group"
             >
                <MapPin className="w-3 h-3 text-brand" />
                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest line-clamp-1 max-w-[150px] group-hover:text-brand transition-colors">
-                  {selectedLocation?.address || "Detecting Node..."}
+                  {isLocationConfirmed ? selectedLocation?.address : "Set Delivery Location"}
                </span>
             </button>
           </div>
@@ -201,6 +227,83 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
            </button>
         </div>
       </header>
+
+      {/* Location Confirmation Modal */}
+      <AnimatePresence>
+        {showLocationModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => isLocationConfirmed && setShowLocationModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            >
+               <div className="p-8 border-b border-slate-100">
+                  <h3 className="text-3xl font-display font-black italic tracking-tighter uppercase text-slate-900">Set Node Location</h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Direct from local nodes to your precise doorstep</p>
+               </div>
+
+               <div className="flex-1 min-h-[300px] bg-slate-50 relative">
+                  <MapContainer 
+                    centerPos={selectedLocation || { lat: 19.0760, lng: 72.8777 }}
+                    zoom={15}
+                    onMapClick={(lat, lng) => {
+                      setSelectedLocation({ lat, lng, address: `Sector Node: ${lat.toFixed(4)}, ${lng.toFixed(4)}` });
+                    }}
+                    markers={selectedLocation ? [{ id: 'selected', lat: selectedLocation.lat, lng: selectedLocation.lng, label: 'DELIVERY POINT' }] : []}
+                  />
+                  <div className="absolute top-4 left-4 right-4 pointer-events-none">
+                     <div className="bg-white/90 backdrop-blur-md p-4 rounded-2xl border border-slate-100 shadow-xl pointer-events-auto">
+                        <div className="flex items-center gap-2 mb-2">
+                           <div className="w-2 h-2 bg-brand rounded-full animate-pulse" />
+                           <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Current selection</span>
+                        </div>
+                        <p className="text-xs font-bold text-slate-900 leading-tight uppercase italic">{selectedLocation?.address || "Click map to select node"}</p>
+                     </div>
+                  </div>
+               </div>
+
+               <div className="p-8 space-y-4">
+                  <button 
+                    onClick={() => {
+                      if ('geolocation' in navigator) {
+                        navigator.geolocation.getCurrentPosition((pos) => {
+                          setSelectedLocation({
+                            lat: pos.coords.latitude,
+                            lng: pos.coords.longitude,
+                            address: "Detected Hyperlocal Node"
+                          });
+                        });
+                      }
+                    }}
+                    className="w-full py-4 border-2 border-slate-100 rounded-2xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-all"
+                  >
+                    <Navigation className="w-4 h-4" />
+                    Detect Live Location
+                  </button>
+                  <button 
+                    disabled={!selectedLocation}
+                    onClick={() => {
+                      setIsLocationConfirmed(true);
+                      setShowLocationModal(false);
+                    }}
+                    className="w-full py-6 bg-brand text-white rounded-2xl flex items-center justify-center gap-3 text-sm font-black uppercase tracking-widest shadow-xl shadow-brand/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
+                  >
+                    Confirm Delivery Node
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <main className="max-w-7xl mx-auto px-4 md:px-6 mt-6 md:mt-8">
         {activeTab === 'market' && (
@@ -339,6 +442,16 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
                             <div className="text-right">
                                <p className="text-sm font-black text-slate-900">₹{order.totalAmount || "Calculated"}</p>
                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{new Date(order.createdAt).toLocaleDateString()}</p>
+                               {(order.status === 'pending' || order.status === 'accepted') && (
+                                 <button 
+                                   disabled={loading}
+                                   onClick={() => cancelOrder(order.id)}
+                                   className="mt-2 flex items-center justify-end gap-1 text-[9px] font-black uppercase tracking-widest text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
+                                 >
+                                   <XCircle className="w-3 h-3" />
+                                   Cancel Order
+                                 </button>
+                               )}
                             </div>
                          </div>
                          <div className="flex items-center justify-between pt-4 border-t border-slate-50">
@@ -385,6 +498,56 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
                     <p className="text-xs font-bold text-white/80 uppercase tracking-widest leading-relaxed">Shop fresh, earn coins, get rewards. Every harvest counts at VegieRoute.</p>
                  </div>
                  <div className="flex flex-col gap-4 md:gap-6">
+                    <div className="bg-white border border-slate-100 rounded-[32px] p-8 space-y-6 shadow-sm">
+                       <div className="flex items-center justify-between">
+                          <div>
+                             <p className="text-[9px] font-black text-brand uppercase tracking-widest mb-1">Subscription Protocol</p>
+                             <h4 className="text-xl font-black uppercase tracking-tight text-slate-900">
+                                {user.subscriptionPlan ? user.subscriptionPlan : 'Free Tier'}
+                             </h4>
+                          </div>
+                          <div className={cn(
+                             "w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg",
+                             user.subscriptionPlan === 'Gold' ? "bg-amber-400 text-white shadow-amber-200" : 
+                             user.subscriptionPlan === 'Silver' ? "bg-slate-400 text-white shadow-slate-200" :
+                             "bg-slate-100 text-slate-400 shadow-none border border-slate-200"
+                          )}>
+                             {user.subscriptionPlan === 'Gold' ? <Crown className="w-6 h-6" /> : <ShieldCheck className="w-6 h-6" />}
+                          </div>
+                       </div>
+
+                       {user.subscriptionExpiry && (
+                          <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                             <Calendar className="w-4 h-4 text-slate-400" />
+                             <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                Expires on: <span className="text-slate-900">{new Date(user.subscriptionExpiry).toLocaleDateString()}</span>
+                             </div>
+                          </div>
+                       )}
+
+                       <div className="space-y-3 pt-2">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Upgrade Channels</p>
+                          <div className="grid grid-cols-2 gap-3">
+                             <button 
+                                disabled={loading || user.subscriptionPlan === 'Silver'}
+                                onClick={() => upgradeSubscription('Silver')}
+                                className="p-4 rounded-2xl border-2 border-slate-50 hover:border-slate-200 transition-all text-left disabled:opacity-50"
+                             >
+                                <p className="text-[8px] font-black uppercase text-slate-400 mb-1">Silver Node</p>
+                                <p className="text-xs font-black uppercase text-slate-900">₹99/mo</p>
+                             </button>
+                             <button 
+                                disabled={loading || user.subscriptionPlan === 'Gold'}
+                                onClick={() => upgradeSubscription('Gold')}
+                                className="p-4 rounded-2xl border-2 border-amber-50 hover:border-amber-100 bg-amber-50/30 transition-all text-left disabled:opacity-50"
+                             >
+                                <p className="text-[8px] font-black uppercase text-amber-500 mb-1">Gold Node</p>
+                                <p className="text-xs font-black uppercase text-slate-900">₹299/mo</p>
+                             </button>
+                          </div>
+                       </div>
+                    </div>
+
                     <button className="bg-white border border-slate-100 rounded-[32px] p-6 text-left hover:border-brand/40 transition-all shadow-sm group">
                        <p className="text-[9px] font-black text-brand uppercase tracking-widest mb-1">Active Wallet</p>
                        <p className="text-sm font-black uppercase tracking-tight text-slate-900 group-hover:text-brand transition-colors">Manage Payments</p>
