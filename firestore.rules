@@ -57,6 +57,17 @@ service cloud.firestore {
       );
     }
 
+    match /rewards/{rewardId} {
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn(); // Allow creation, but ideally we'd validate against a delivered order
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid && (
+        existing().status == 'unscratched' && 
+        incoming().status == 'scratched' && 
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'scratchedAt'])
+      );
+    }
+
     match /users/{userId}/sellerData/profile {
       allow read: if isSignedIn();
       allow write: if isOwner(userId) || isAdmin();

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { db, auth } from '../firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, runTransaction } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, runTransaction, addDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
-import { TrendingUp, Map, CheckCircle, Navigation, DollarSign, Package, Users, ShieldCheck, AlertCircle, Play, MoreVertical, Signal, MapPin, Activity, Clock, Loader2, Leaf, Sprout, Upload, X, Star, UserX, LogOut, ShoppingBag, Settings, Store, Bell } from 'lucide-react';
+import { TrendingUp, Map, CheckCircle, Navigation, DollarSign, Package, Users, ShieldCheck, AlertCircle, Play, MoreVertical, Signal, MapPin, Activity, Clock, Loader2, Leaf, Sprout, Upload, X, Star, UserX, LogOut, ShoppingBag, Settings, Store, Bell, Gift } from 'lucide-react';
 import { Order, SellerProfile } from '../types';
 import MapContainer from './MapContainer';
 import { cn, formatCurrency, handleFirestoreError, OperationType } from '../lib/utils';
@@ -271,26 +271,23 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
         if (!orderSnap.exists()) throw new Error("Order not found");
         
         const customerId = orderSnap.data().customerId;
-        const customerRef = doc(db, 'users', customerId);
-        
-        // Skip fetching sellerRef in transaction to avoid write-write conflicts with location updates
-        // The security rules will still verify the seller's role via get() but it's more stable
-        const customerSnap = await transaction.get(customerRef);
+        const earnedSuperCoins = Math.floor(Math.random() * 5) + 2; // Min 2, max 6
 
-        const earnedSuperCoins = Math.floor(Math.random() * 3) + 5; 
-
+        // 1. Update order status
         transaction.update(orderRef, { 
           status: 'delivered',
-          rewardAvailable: true,
-          rewardAmount: earnedSuperCoins,
           updatedAt: new Date().toISOString()
         });
         
-        if (customerSnap.exists()) {
-          transaction.update(customerRef, {
-            superCoins: (customerSnap.data()?.superCoins || 0) + earnedSuperCoins
-          });
-        }
+        // 2. Create Reward document
+        const rewardRef = doc(collection(db, 'rewards'));
+        transaction.set(rewardRef, {
+          userId: customerId,
+          amount: earnedSuperCoins,
+          status: 'unscratched',
+          type: 'coins',
+          createdAt: new Date().toISOString()
+        });
       });
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, `orders/${orderId}`, auth);

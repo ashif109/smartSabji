@@ -51,6 +51,16 @@ export interface SellerProfile extends UserProfile {
   reviews?: Review[];
 }
 
+export interface Reward {
+  id: string;
+  userId: string;
+  amount: number;
+  status: 'unscratched' | 'scratched';
+  type: 'coins';
+  createdAt: string;
+  scratchedAt?: string;
+}
+
 export type VegetableCategory = "Leafy" | "Roots" | "Daily" | "Fruits" | "Herbs" | "Exotic";
 
 export interface Product {

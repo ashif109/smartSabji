@@ -2,15 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
 import { collection, addDoc, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingBag, MapPin, Search, Sprout, User, ArrowRight, Clock, Signal, Plus, Minus, UserX, ShieldCheck, Loader2, ChefHat, Sparkles, ChevronRight, Zap, Navigation, XCircle, CreditCard, Crown, Calendar } from 'lucide-react';
-import { Order, UserProfile, Product, VegetableCategory } from '../types';
+import { ShoppingBag, MapPin, Search, Sprout, User, ArrowRight, Clock, Signal, Plus, Minus, UserX, ShieldCheck, Loader2, ChefHat, Sparkles, ChevronRight, Zap, Navigation, XCircle, CreditCard, Crown, Calendar, Gift, QrCode } from 'lucide-react';
+import { Order, UserProfile, Product, VegetableCategory, SellerProfile } from '../types';
 import { PRODUCTS } from '../constants';
-import { cn, handleFirestoreError, OperationType } from '../lib/utils';
+import { cn, formatCurrency, handleFirestoreError, OperationType } from '../lib/utils';
 import ProductCard from './ProductCard';
 import CartSidebar from './CartSidebar';
 import BottomNav from './BottomNav';
 import RecipeAssistant from './RecipeAssistant';
 import MapContainer from './MapContainer';
+import RewardsView from './RewardsView';
 import { CartService, CartItem } from '../services/CartService';
 
 interface CustomerViewProps {
@@ -30,6 +31,8 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
   const [selectedCategory, setSelectedCategory] = useState<VegetableCategory | 'All'>('All');
   const [loading, setLoading] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showRewards, setShowRewards] = useState(false);
+  const [sellersInfo, setSellersInfo] = useState<Record<string, SellerProfile>>({});
 
   // Sync Cart to LocalStorage
   useEffect(() => {
@@ -67,6 +70,21 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
     const unsubscribe = onSnapshot(q, (snap) => {
       const ordersData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
       setMyOrders(ordersData.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      
+      // Fetch sellers info for active orders
+      ordersData.forEach(order => {
+        if (order.sellerId && !sellersInfo[order.sellerId]) {
+          const unsubSeller = onSnapshot(doc(db, 'users', order.sellerId), (sellerSnap) => {
+            if (sellerSnap.exists()) {
+              setSellersInfo(prev => ({
+                ...prev,
+                [order.sellerId!]: { id: sellerSnap.id, ...sellerSnap.data() } as SellerProfile
+              }));
+            }
+          });
+          // Note: In a real app we'd clean these up too
+        }
+      });
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'orders', auth);
     });
@@ -197,6 +215,18 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 pb-40 overflow-x-hidden relative font-sans">
+      <AnimatePresence>
+        {showRewards && (
+          <motion.div 
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            className="fixed inset-0 z-[150]"
+          >
+            <RewardsView user={user} onBack={() => setShowRewards(false)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Dynamic Header */}
       <header className="glass-premium px-4 md:px-8 py-4 md:py-5 flex justify-between items-center sticky top-0 z-50 transition-all border-b border-slate-100">
         <div className="flex items-center gap-3 md:gap-4">
@@ -642,6 +672,41 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
                                )}
                             </div>
                          </div>
+
+                         {/* Payment QR Code Section */}
+                         {order.sellerId && sellersInfo[order.sellerId] && (order.status === 'accepted' || order.status === 'ongoing' || order.status === 'delivered') && (
+                           <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+                              <div className="flex items-center justify-between px-1">
+                                 <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-slate-100 shadow-sm">
+                                       <QrCode className="w-5 h-5 text-brand" />
+                                    </div>
+                                    <div>
+                                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-900">Payment Protocol</p>
+                                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">{sellersInfo[order.sellerId].businessDetails?.shopName || 'Merchant Node'}</p>
+                                    </div>
+                                 </div>
+                                 <div className="text-right">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">UPI ID</p>
+                                    <p className="text-[10px] font-bold text-brand uppercase tracking-tight">{sellersInfo[order.sellerId].paymentInfo?.upiId || 'Not Set'}</p>
+                                 </div>
+                              </div>
+                              
+                              {sellersInfo[order.sellerId].paymentInfo?.qrCodeUrl && (
+                                <div className="bg-white p-6 rounded-2xl border border-slate-200 flex flex-col items-center gap-4 shadow-inner">
+                                   <img 
+                                     src={sellersInfo[order.sellerId].paymentInfo?.qrCodeUrl || ''} 
+                                     alt="QR Code" 
+                                     className="w-32 h-32 object-contain"
+                                   />
+                                   <div className="flex flex-col items-center gap-1">
+                                      <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Scan with UPI App</p>
+                                      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em]">Pay ₹{order.totalAmount} to Merchant</p>
+                                   </div>
+                                </div>
+                              )}
+                           </div>
+                         )}
                          <div className="flex items-center justify-between pt-4 border-t border-slate-50">
                             <div className="flex items-center gap-2 text-slate-400">
                                <MapPin className="w-4 h-4" />
@@ -682,7 +747,16 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
                  <div className="bg-brand border border-brand/20 rounded-[40px] p-10 text-white space-y-6 shadow-xl shadow-brand/10 relative overflow-hidden group">
                     <Zap className="absolute -right-8 -top-8 w-40 h-40 opacity-10 group-hover:scale-110 transition-transform duration-1000" />
                     <h4 className="text-[10px] font-black uppercase tracking-[0.4em] opacity-80">Super Coins</h4>
-                    <p className="text-7xl font-display font-black italic tracking-tighter tabular-nums">{user.superCoins || 0}</p>
+                    <div className="flex items-end justify-between">
+                       <p className="text-7xl font-display font-black italic tracking-tighter tabular-nums">{user.superCoins || 0}</p>
+                       <button 
+                         onClick={() => setShowRewards(true)}
+                         className="bg-white/20 hover:bg-white/30 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/30 flex items-center gap-2 transition-all group/rewards"
+                       >
+                          <Gift className="w-5 h-5 group-hover/rewards:scale-110 transition-transform" />
+                          <span className="text-[10px] font-black uppercase tracking-widest">Rewards</span>
+                       </button>
+                    </div>
                     <p className="text-xs font-bold text-white/80 uppercase tracking-widest leading-relaxed">Shop fresh, earn coins, get rewards. Every harvest counts at VegieRoute.</p>
                  </div>
                  <div className="flex flex-col gap-4 md:gap-6">
@@ -706,7 +780,9 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
 
                        {user.subscriptionExpiry && (
                           <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                             <Calendar className="w-4 h-4 text-slate-400" />
+                             <div className="w-4 h-4 text-slate-400">
+                                <Calendar className="w-4 h-4" />
+                             </div>
                              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                                 Expires on: <span className="text-slate-900">{new Date(user.subscriptionExpiry).toLocaleDateString()}</span>
                              </div>

@@ -41,14 +41,37 @@
         "serviceArea": { "type": "string" },
         "isKycVerified": { "type": "boolean" },
         "currentLocation": { "type": "object", "properties": { "lat": { "type": "number" }, "lng": { "type": "number" }, "updatedAt": { "type": "string", "format": "date-time" } } },
-        "isOnline": { "type": "boolean" }
+        "isOnline": { "type": "boolean" },
+        "paymentInfo": { 
+          "type": "object", 
+          "properties": { 
+            "upiId": { "type": "string" }, 
+            "qrCodeUrl": { "type": "string" } 
+          } 
+        }
       }
+    },
+    "Reward": {
+      "title": "Reward",
+      "description": "Scratch card reward for customers",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "isScratched": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["unscratched", "scratched"] },
+        "type": { "type": "string", "enum": ["coins"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "scratchedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "amount", "status"]
     }
   },
   "firestore": {
     "/users/{userId}": { "schema": "User", "description": "Root user profile" },
     "/users/{userId}/sellerData/profile": { "schema": "SellerProfile", "description": "Seller-specific data" },
     "/orders/{orderId}": { "schema": "Order", "description": "Order records" },
+    "/rewards/{rewardId}": { "schema": "Reward", "description": "Reward scratch cards" },
     "/demand": { "schema": { "type": "object", "properties": { "locations": { "type": "array" } } }, "description": "Aggregated demand for heatmap" }
   }
 }
