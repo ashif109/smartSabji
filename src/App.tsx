@@ -33,7 +33,9 @@ export default function App() {
           }
           setLoading(false);
         }, (error) => {
-          handleFirestoreError(error, OperationType.GET, `users/${u.uid}`, auth);
+          if (auth.currentUser) {
+            handleFirestoreError(error, OperationType.GET, `users/${u.uid}`, auth);
+          }
           setLoading(false);
         });
       } else {

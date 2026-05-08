@@ -270,9 +270,11 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
           updatedAt: new Date().toISOString()
         });
         
-        transaction.update(customerRef, {
-          superCoins: (customerSnap.data()?.superCoins || 0) + earnedSuperCoins
-        });
+        if (customerSnap.exists()) {
+          transaction.update(customerRef, {
+            superCoins: (customerSnap.data()?.superCoins || 0) + earnedSuperCoins
+          });
+        }
       });
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, `orders/${orderId}`, auth);

@@ -13,8 +13,7 @@ service cloud.firestore {
     function isAdmin() { 
       return isSignedIn() && (
         request.auth.token.email == 'ansariasif5413@gmail.com' ||
-        request.auth.token.get('email', '') == 'ansariasif5413@gmail.com' ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        request.auth.token.get('email', '') == 'ansariasif5413@gmail.com'
       ); 
     }
     
@@ -49,15 +48,12 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isSignedIn(); // Broaden get to read for onSnapshot stability
-      allow list: if isSignedIn() && (isAdmin() || (resource != null && resource.data.get('role', '') == 'seller' && resource.data.get('isOnline', false) == true));
-      allow create: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming());
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId) && isValidUser(incoming());
       allow update: if isSignedIn() && (
-        request.auth.uid == userId || 
+        isOwner(userId) || 
         isAdmin() ||
-        // Allow sellers to award superCoins on delivery. 
-        // We trust the transaction logic and server-side rules here.
-        (incoming().diff(existing()).affectedKeys().hasOnly(['superCoins']))
+        incoming().diff(existing()).affectedKeys().hasOnly(['superCoins'])
       );
     }
 
