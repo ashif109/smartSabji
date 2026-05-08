@@ -2,10 +2,13 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { db, auth } from '../firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, runTransaction, addDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
-import { TrendingUp, Map, CheckCircle, Navigation, DollarSign, Package, Users, ShieldCheck, AlertCircle, Play, MoreVertical, Signal, MapPin, Activity, Clock, Loader2, Leaf, Sprout, Upload, X, Star, UserX, LogOut, ShoppingBag, Settings, Store, Bell, Gift } from 'lucide-react';
-import { Order, SellerProfile } from '../types';
+import { TrendingUp, Map, CheckCircle, Navigation, DollarSign, QrCode, Package, Users, ShieldCheck, AlertCircle, Play, MoreVertical, Signal, MapPin, Activity, Clock, Loader2, Leaf, Sprout, Upload, X, Star, UserX, LogOut, ShoppingBag, Settings, Store, Bell, Gift, BarChart3, ListChecks } from 'lucide-react';
+import { Order, SellerProfile, MandiRate, Product } from '../types';
+import { MANDI_RATES } from '../constants';
 import MapContainer from './MapContainer';
+import VendorAnalytics from './VendorAnalytics';
 import { cn, formatCurrency, handleFirestoreError, OperationType } from '../lib/utils';
+import { AIService } from '../services/aiService';
 
 interface SellerViewProps {
   seller: SellerProfile;
@@ -13,7 +16,9 @@ interface SellerViewProps {
 
 const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'map' | 'drive'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'map' | 'analytics' | 'inventory'>('dashboard');
+  const [mandiRates, setMandiRates] = useState<MandiRate[]>([]);
+  const [mandiInsight, setMandiInsight] = useState<string>('');
   const [optimizedRoute, setOptimizedRoute] = useState<Order[]>([]);
   const [isTrialActive, setIsTrialActive] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -77,6 +82,28 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
         console.warn("Assigned logistics stream encrypted/locked.");
       } else {
         handleFirestoreError(error, OperationType.LIST, 'orders/assigned', auth);
+      }
+    });
+
+    const qMandi = query(collection(db, 'mandi_rates'));
+    let isSeedingMandi = false;
+    const unsubMandi = onSnapshot(qMandi, async (snap) => {
+      const rates = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MandiRate));
+      
+      if (rates.length === 0 && !isSeedingMandi) {
+        isSeedingMandi = true;
+        for (const r of MANDI_RATES) {
+          try {
+            await addDoc(collection(db, 'mandi_rates'), r);
+          } catch (e) {
+            console.error(e);
+          }
+        }
+        isSeedingMandi = false;
+      } else if (rates.length > 0) {
+        setMandiRates(rates);
+        const insight = await AIService.getMandiInsights(rates);
+        setMandiInsight(insight);
       }
     });
 
@@ -313,6 +340,7 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
     bio: seller.businessDetails?.bio || '',
     logoUrl: seller.businessDetails?.logoUrl || '',
     membershipPlan: seller.membershipPlan || 'standard',
+    membershipExpiry: seller.subscriptionExpiry || '2026-12-31',
   });
 
   useEffect(() => {
@@ -327,9 +355,10 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
         bio: seller.businessDetails?.bio || '',
         logoUrl: seller.businessDetails?.logoUrl || '',
         membershipPlan: seller.membershipPlan || 'standard',
+        membershipExpiry: seller.subscriptionExpiry || '2026-12-31',
       });
     }
-  }, [showOnboarding, seller.businessDetails, seller.paymentInfo, seller.membershipPlan]);
+  }, [showOnboarding, seller.businessDetails, seller.paymentInfo, seller.membershipPlan, seller.subscriptionExpiry]);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -425,6 +454,23 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
     return dist;
   }, [mapPath]);
 
+  const [products, setProducts] = useState<Product[]>([]);
+  useEffect(() => {
+    const qProducts = query(collection(db, 'products'), where('sellerId', '==', seller.id));
+    const unsubProducts = onSnapshot(qProducts, (snap) => {
+      setProducts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
+    });
+    return () => unsubProducts();
+  }, [seller.id]);
+
+  const updateProductStock = async (productId: string, newStock: number) => {
+    try {
+      await updateDoc(doc(db, 'products', productId), { stock: newStock });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.UPDATE, `products/${productId}`, auth);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F4F7F5] text-dark pb-32 overflow-x-hidden relative font-sans">
       <AnimatePresence>
@@ -482,6 +528,43 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Mandi Ticker */}
+      <div className="bg-dark text-white py-3 overflow-hidden border-b border-white/5 relative z-[60]">
+        <div className="flex animate-marquee whitespace-nowrap gap-12 items-center">
+          {mandiInsight && (
+             <div className="flex items-center gap-3">
+               <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
+               <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">{mandiInsight}</span>
+             </div>
+          )}
+          {mandiRates.map((rate, i) => (
+            <div key={i} className="flex items-center gap-3">
+               <span className="text-[10px] font-black uppercase tracking-widest opacity-60">{rate.vegetableName}</span>
+               <span className="text-[11px] font-display font-black tabular-nums">{formatCurrency(rate.currentPrice)}</span>
+               <span className={cn(
+                 "text-[9px] font-black px-1.5 py-0.5 rounded",
+                 rate.trend === 'rising' ? "bg-red-500/20 text-red-500" : "bg-brand/20 text-brand"
+               )}>
+                 {rate.trend === 'rising' ? '▲' : '▼'}
+               </span>
+            </div>
+          ))}
+          {/* Duplicate for smooth scroll */}
+          {mandiRates.map((rate, i) => (
+            <div key={`dup-${i}`} className="flex items-center gap-3">
+               <span className="text-[10px] font-black uppercase tracking-widest opacity-60">{rate.vegetableName}</span>
+               <span className="text-[11px] font-display font-black tabular-nums">{formatCurrency(rate.currentPrice)}</span>
+               <span className={cn(
+                 "text-[9px] font-black px-1.5 py-0.5 rounded",
+                 rate.trend === 'rising' ? "bg-red-500/20 text-red-500" : "bg-brand/20 text-brand"
+               )}>
+                 {rate.trend === 'rising' ? '▲' : '▼'}
+               </span>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Top Header */}
       <header className="glass-premium px-4 md:px-8 py-4 md:py-6 flex justify-between items-center sticky top-0 z-50 border-b border-slate-100">
@@ -589,9 +672,15 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
                       <h3 className="text-2xl font-black uppercase tracking-tighter text-gray-800 leading-none">
                         {seller.businessDetails?.shopName || seller.fullName}
                       </h3>
-                      <div className="flex items-center gap-2 text-[10px] font-black text-brand uppercase tracking-widest">
-                        <Clock className="w-3 h-3" />
-                        {seller.businessDetails?.operatingHours || "Set Hours in Profile"}
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 text-[10px] font-black text-brand uppercase tracking-widest">
+                          <Clock className="w-3 h-3" />
+                          {seller.businessDetails?.operatingHours || "Set Hours"}
+                        </div>
+                        <div className="bg-slate-900 border border-white/10 px-2 py-0.5 rounded-md flex items-center gap-1.5">
+                           <ShieldCheck className="w-2.5 h-2.5 text-brand" />
+                           <span className="text-[8px] font-black uppercase text-white tracking-widest">{seller.membershipPlan || 'Standard'}</span>
+                        </div>
                       </div>
                     </div>
                     <p className="text-sm font-medium text-gray-400 uppercase tracking-wider leading-relaxed line-clamp-2">
@@ -734,6 +823,85 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
                 </div>
               </div>
             </motion.div>
+          )}
+
+          {activeTab === 'analytics' && (
+             <motion.div 
+               key="analytics"
+               initial={{ opacity: 0, x: 20 }}
+               animate={{ opacity: 1, x: 0 }}
+               exit={{ opacity: 0, x: -20 }}
+             >
+               <VendorAnalytics orders={orders} />
+             </motion.div>
+          )}
+
+          {activeTab === 'inventory' && (
+             <motion.div 
+               key="inventory"
+               initial={{ opacity: 0, x: 20 }}
+               animate={{ opacity: 1, x: 0 }}
+               exit={{ opacity: 0, x: -20 }}
+               className="space-y-6"
+             >
+               <div className="flex justify-between items-center px-1">
+                 <div>
+                   <h3 className="text-2xl font-display font-black text-slate-900 tracking-tight uppercase italic text-gradient-brand">Fresh Inventory</h3>
+                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Manage stock and freshness levels</p>
+                 </div>
+                 <button className="btn-premium py-3 px-6 text-[10px] shadow-sm">Add New Harvest</button>
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 {products.map(product => (
+                   <div key={product.id} className="premium-card group overflow-hidden">
+                      <div className="relative h-48 -mx-8 -mt-8 mb-6 overflow-hidden">
+                        <img src={product.imageUrl} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt={product.name} />
+                        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-sm">
+                           <Leaf className="w-3 h-3 text-brand" />
+                           <span className="text-[10px] font-black uppercase text-brand">{product.freshnessScore}% Fresh</span>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="text-xl font-display font-black uppercase italic tracking-tighter">{product.name}</h4>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{product.category} • {formatCurrency(product.price)}/{product.unit}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                           <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                             <span className="text-slate-400">Current Stock</span>
+                             <span className={cn(product.stock < 5 ? "text-red-500" : "text-slate-900")}>{product.stock} {product.unit}s</span>
+                           </div>
+                           <div className="h-1.5 bg-slate-50 rounded-full overflow-hidden">
+                             <div 
+                               className={cn("h-full rounded-full transition-all", product.stock < 5 ? "bg-red-500" : "bg-brand")} 
+                               style={{ width: `${Math.min(100, (product.stock / 50) * 100)}%` }} 
+                             />
+                           </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                           <button 
+                             onClick={() => updateProductStock(product.id, Math.max(0, product.stock - 5))}
+                             className="flex-1 py-3 bg-slate-50 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100"
+                           >
+                             - 5 Units
+                           </button>
+                           <button 
+                             onClick={() => updateProductStock(product.id, product.stock + 5)}
+                             className="flex-1 py-3 bg-slate-50 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100"
+                           >
+                             + 5 Units
+                           </button>
+                        </div>
+                      </div>
+                   </div>
+                 ))}
+               </div>
+             </motion.div>
           )}
 
           {activeTab === 'map' && (
@@ -933,25 +1101,26 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
       </div>
 
       {/* Navigation Rail */}
-      <footer className="fixed bottom-0 left-0 right-0 p-4 sm:p-10 z-[100] pointer-events-none">
-        <div className="max-w-md mx-auto h-16 sm:h-24 bg-white/90 backdrop-blur-2xl rounded-2xl sm:rounded-[40px] border border-gray-100 flex items-center justify-around px-4 sm:px-8 shadow-2xl pointer-events-auto">
+      <footer className="fixed bottom-6 left-0 right-0 px-4 sm:px-10 z-[120] pointer-events-none">
+        <div className="max-w-lg mx-auto h-20 sm:h-24 bg-dark/95 backdrop-blur-3xl rounded-[32px] sm:rounded-[40px] border border-white/10 flex items-center justify-around px-4 sm:px-8 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] pointer-events-auto">
           {[
-            { id: 'dashboard', icon: TrendingUp, label: 'Stats' },
-            { id: 'map', icon: Map, label: 'Radar' },
-            { id: 'drive', icon: Navigation, label: 'Drive' },
+            { id: 'dashboard', icon: Store, label: 'HUB' },
+            { id: 'analytics', icon: BarChart3, label: 'INSIGHTS' },
+            { id: 'map', icon: Activity, label: 'RADAR' },
+            { id: 'inventory', icon: ListChecks, label: 'STOCK' },
           ].map((item) => (
             <button 
               key={item.id}
               onClick={() => setActiveTab(item.id as any)} 
               className={cn(
-                "flex flex-col items-center gap-1 sm:gap-1.5 transition-all w-16 sm:w-20 relative",
-                activeTab === item.id ? "text-brand" : "text-gray-400 hover:text-gray-600"
+                "flex flex-col items-center gap-1 sm:gap-1.5 transition-all w-14 sm:w-20 relative group",
+                activeTab === item.id ? "text-brand" : "text-white/40 hover:text-white/70"
               )}
             >
-              <item.icon className={cn("w-5 h-5 sm:w-7 sm:h-7 transition-transform", activeTab === item.id && "scale-110")} />
-              <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest leading-none">{item.label}</span>
+              <item.icon className={cn("w-5 h-5 sm:w-7 sm:h-7 transition-transform group-hover:scale-110", activeTab === item.id && "scale-110")} />
+              <span className="text-[7px] sm:text-[9px] font-black uppercase tracking-[0.2em] leading-none">{item.label}</span>
               {activeTab === item.id && (
-                <motion.div layoutId="nav-indicator" className="absolute -bottom-1 w-1 h-1 bg-brand rounded-full" />
+                <motion.div layoutId="nav-indicator" className="absolute -bottom-2 w-1.5 h-1.5 bg-brand rounded-full shadow-[0_0_10px_#10B981]" />
               )}
             </button>
           ))}
@@ -983,9 +1152,32 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
                 </button>
               )}
               <div className="space-y-3 sm:space-y-4">
-                <div className="bg-brand/10 text-brand border border-brand/20 w-fit text-[8px] sm:text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-widest">Merchant Registration</div>
-                <h2 className="text-3xl sm:text-6xl font-black uppercase tracking-tighter leading-none text-gray-800">Business Profile</h2>
-                <p className="text-gray-400 font-bold uppercase tracking-[0.15em] text-[8px] sm:text-[10px] leading-relaxed">Setup your shop details & payment information</p>
+                <div className="bg-brand/10 text-brand border border-brand/20 w-fit text-[8px] sm:text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-widest">Merchant Settings</div>
+                <h2 className="text-3xl sm:text-6xl font-black uppercase tracking-tighter leading-none text-gray-800">Shop Profile</h2>
+                <p className="text-gray-400 font-bold uppercase tracking-[0.15em] text-[8px] sm:text-[10px] leading-relaxed">Setup your shop details, subscription & payment information</p>
+              </div>
+
+              {/* Subscription Plan Summary */}
+              <div className="bg-slate-900 rounded-[32px] p-6 sm:p-8 text-white relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-8 opacity-5">
+                   <ShieldCheck className="w-32 h-32 rotate-12" />
+                </div>
+                <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+                   <div className="space-y-2">
+                     <div className="flex items-center gap-2">
+                       <span className="bg-brand text-dark text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Current Plan</span>
+                       <h4 className="text-2xl font-black uppercase tracking-tighter italic">{onboardingData.membershipPlan} Edition</h4>
+                     </div>
+                     <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.2em]">Expires on {new Date(onboardingData.membershipExpiry).toLocaleDateString()}</p>
+                   </div>
+                   <div className="flex flex-col items-start sm:items-end gap-1">
+                      <p className="text-[8px] font-black text-white/40 uppercase tracking-widest">Account Status</p>
+                      <div className="flex items-center gap-2 px-3 py-1 bg-brand/10 border border-brand/20 rounded-lg">
+                        <div className="w-1.5 h-1.5 bg-brand rounded-full animate-pulse" />
+                        <span className="text-[10px] font-black text-brand uppercase tracking-widest">Active & Verified</span>
+                      </div>
+                   </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
@@ -1067,27 +1259,32 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
                    </div>
                  </div>
                   <div className="space-y-1.5 sm:space-y-4 sm:col-span-2">
-                    <label className="text-[8px] sm:text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Select Growth Plan</label>
+                    <label className="text-[8px] sm:text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Subscription & Growth Plans</label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {(['standard', 'premium', 'enterprise'] as const).map((plan) => (
                         <button
                           key={plan}
                           onClick={() => setOnboardingData({...onboardingData, membershipPlan: plan})}
                           className={cn(
-                            "p-4 rounded-2xl border-2 text-left transition-all relative overflow-hidden group",
+                            "p-5 rounded-3xl border-2 text-left transition-all relative overflow-hidden group",
                             onboardingData.membershipPlan === plan 
-                              ? "border-brand bg-brand/5" 
+                              ? "border-brand bg-brand/5 shadow-brand-glow/10" 
                               : "border-gray-100 bg-gray-50 hover:border-gray-200"
                           )}
                         >
-                          <div className="relative z-10 space-y-1">
-                            <p className="text-[8px] font-black uppercase tracking-widest text-brand">{plan}</p>
-                            <p className="text-xs font-black text-gray-800 uppercase">
-                              {plan === 'standard' ? 'Free' : plan === 'premium' ? '₹499/mo' : 'Custom'}
-                            </p>
-                            <p className="text-[7px] font-bold text-gray-400 uppercase leading-none mt-1">
-                              {plan === 'standard' ? 'Basic Listing' : plan === 'premium' ? 'Priority Radar' : 'Full Sector dominance'}
-                            </p>
+                          <div className="relative z-10 space-y-2">
+                            <div className="flex justify-between items-start">
+                              <p className={cn("text-[8px] font-black uppercase tracking-widest", onboardingData.membershipPlan === plan ? "text-brand" : "text-gray-400")}>{plan}</p>
+                              {plan === 'premium' && <Gift className="w-3 h-3 text-amber-500 animate-bounce" />}
+                            </div>
+                            <div>
+                               <p className="text-lg font-black text-gray-800 uppercase leading-none">
+                                 {plan === 'standard' ? 'Free' : plan === 'premium' ? '₹499/mo' : 'Contact Scale'}
+                               </p>
+                               <p className="text-[7px] font-bold text-gray-400 uppercase leading-none mt-1.5">
+                                 {plan === 'standard' ? 'Basic Listing & Simple Routing' : plan === 'premium' ? 'AI Radar & Multi-point Route' : 'Enterprise Logistics & API'}
+                               </p>
+                            </div>
                           </div>
                           {onboardingData.membershipPlan === plan && (
                             <CheckCircle className="absolute top-3 right-3 w-4 h-4 text-brand" />

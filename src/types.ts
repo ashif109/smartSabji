@@ -35,6 +35,15 @@ export interface SellerProfile extends UserProfile {
     operatingHours?: string;
     bio?: string;
     logoUrl?: string;
+    vendorStory?: string;
+    experienceYears?: number;
+  };
+  identityMetrics?: {
+    trustScore: number; // 0-100
+    freshnessRating: number; // 0-5
+    hygieneRating: number; // 0-5
+    deliveryPerformance: number; // 0-100
+    loyaltyScore: number; // 0-100
   };
   paymentInfo?: {
     upiId?: string;
@@ -49,6 +58,16 @@ export interface SellerProfile extends UserProfile {
   averageRating?: number;
   totalRatings?: number;
   reviews?: Review[];
+}
+
+export interface MandiRate {
+  id: string;
+  vegetableName: string;
+  currentPrice: number;
+  previousPrice: number;
+  trend: 'rising' | 'falling' | 'stable';
+  aiInsight?: string;
+  updatedAt: string;
 }
 
 export interface Reward {
@@ -74,7 +93,11 @@ export interface Product {
   stock: number;
   sellerId: string;
   rating: number;
-  localNames?: string[]; // English transliterations like "Aloo", "Tamatar", etc.
+  localNames?: string[]; 
+  freshnessScore: number; // 0-100
+  arrivedOn: string; // ISO Date
+  isFreshArrivedToday: boolean;
+  mandiPriceTrend?: 'rising' | 'falling' | 'stable';
 }
 
 export interface Recipe {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
 import { collection, addDoc, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingBag, MapPin, Search, Sprout, User, ArrowRight, Clock, Signal, Plus, Minus, UserX, ShieldCheck, Loader2, ChefHat, Sparkles, ChevronRight, Zap, Navigation, XCircle, CreditCard, Crown, Calendar, Gift, QrCode } from 'lucide-react';
+import { ShoppingBag, MapPin, Search, Sprout, User, ArrowRight, Clock, Signal, Plus, Minus, UserX, ShieldCheck, Loader2, ChefHat, Sparkles, ChevronRight, Zap, Navigation, XCircle, CreditCard, Crown, Calendar, Gift, QrCode, Mic, MicOff } from 'lucide-react';
 import { Order, UserProfile, Product, VegetableCategory, SellerProfile } from '../types';
 import { PRODUCTS } from '../constants';
 import { cn, formatCurrency, handleFirestoreError, OperationType } from '../lib/utils';
@@ -13,6 +13,7 @@ import RecipeAssistant from './RecipeAssistant';
 import MapContainer from './MapContainer';
 import RewardsView from './RewardsView';
 import { CartService, CartItem } from '../services/CartService';
+import { AIService } from '../services/aiService';
 
 interface CustomerViewProps {
   user: UserProfile;
@@ -33,6 +34,8 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showRewards, setShowRewards] = useState(false);
   const [sellersInfo, setSellersInfo] = useState<Record<string, SellerProfile>>({});
+  const [isListening, setIsListening] = useState(false);
+  const [voiceResult, setVoiceResult] = useState<string | null>(null);
 
   // Sync Cart to LocalStorage
   useEffect(() => {
@@ -209,6 +212,44 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
     return matchesLocal;
   });
 
+  const handleVoiceOrder = async () => {
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
+
+    setIsListening(true);
+    setVoiceResult("Listening for your harvest...");
+    
+    // In a real browser we use SpeechRecognition API
+    // Here we simulate the result after 2 seconds
+    setTimeout(async () => {
+      const simulatedText = "Add 2kg potatoes and 500g tomatoes to my bag";
+      setIsListening(false);
+      setVoiceResult(`AI Processing: "${simulatedText}"`);
+      
+      try {
+        const result = await AIService.parseVoiceOrder(simulatedText, products);
+        if (result.items.length > 0) {
+          result.items.forEach(item => {
+            const product = products.find(p => p.id === item.productId);
+            if (product) {
+              setCart(prev => CartService.addToCart(prev, product, item.quantity));
+            }
+          });
+          setVoiceResult(`Success! Added ${result.items.length} items to your bag.`);
+          setTimeout(() => setVoiceResult(null), 3000);
+        } else {
+          setVoiceResult("AI couldn't find those items in current harvest.");
+          setTimeout(() => setVoiceResult(null), 3000);
+        }
+      } catch (e) {
+        setVoiceResult("AI Core offline. Try again.");
+        setTimeout(() => setVoiceResult(null), 3000);
+      }
+    }, 2000);
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 pb-40 overflow-x-hidden relative font-sans">
       <AnimatePresence>
@@ -249,6 +290,22 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
         </div>
         
         <div className="flex items-center gap-2 md:gap-4">
+           {/* Voice Command Button */}
+           <button 
+             onClick={handleVoiceOrder}
+             className={cn(
+               "w-10 h-10 md:w-12 md:h-12 border rounded-xl md:rounded-2xl flex items-center justify-center transition-all shadow-sm relative",
+               isListening ? "bg-red-500 border-red-500 text-white animate-pulse" : "bg-slate-50 border-slate-100 text-slate-400 hover:text-brand"
+             )}
+           >
+              {isListening ? <MicOff className="w-4 h-4 md:w-5 md:h-5" /> : <Mic className="w-4 h-4 md:w-5 md:h-5" />}
+              {voiceResult && (
+                <div className="absolute top-14 right-0 bg-dark text-white px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest whitespace-nowrap shadow-2xl z-[60]">
+                  {voiceResult}
+                </div>
+              )}
+           </button>
+
            <button 
              onClick={() => setShowSearchModal(true)}
              className="w-10 h-10 md:w-12 md:h-12 bg-slate-50 border border-slate-100 rounded-xl md:rounded-2xl flex items-center justify-center text-slate-400 hover:text-brand hover:border-brand/20 transition-all shadow-sm"
@@ -869,9 +926,10 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
       <CartSidebar 
         isOpen={showCart} 
         onClose={() => setShowCart(false)} 
-        cart={cart.map(c => ({ product: c, quantity: c.quantity }))} // Adapt existing interface
+        cart={cart.map(c => ({ product: c, quantity: c.quantity }))}
         onUpdateQuantity={updateQuantity}
         onPlaceOrder={placeOrder}
+        onAddToCart={addToCart}
         loading={loading}
       />
     </div>

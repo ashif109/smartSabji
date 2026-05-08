@@ -1,6 +1,6 @@
 import React from 'react';
 import { Product } from '../types';
-import { Star, Plus, Minus } from 'lucide-react';
+import { Star, Plus, Minus, Leaf, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface ProductCardProps {
@@ -18,7 +18,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart, quantit
       viewport={{ once: true }}
       className="bg-white border border-slate-100 rounded-[32px] md:rounded-[40px] p-4 md:p-5 flex flex-col gap-4 md:gap-5 group hover:shadow-premium hover:border-brand/20 transition-all duration-500 relative overflow-hidden h-full group"
     >
-      <div className="relative aspect-square rounded-[24px] md:rounded-[32px] overflow-hidden bg-slate-100 flex items-center justify-center shrink-0">
+      <div className="relative aspect-square rounded-[24px] md:rounded-[32px] overflow-hidden bg-slate-100 flex items-center justify-center shrink-0 group/img">
          <img 
            src={product.imageUrl} 
            alt={product.name} 
@@ -29,22 +29,34 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart, quantit
              target.src = 'https://images.unsplash.com/photo-1610348725531-843dff563e2c?q=80&w=400&auto=format&fit=crop';
            }}
          />
-         <div className="absolute top-3 left-3 md:top-4 md:left-4 flex flex-wrap gap-2">
-            <div className="bg-white/90 backdrop-blur-md px-2 py-1 rounded-xl flex items-center gap-1.5 shadow-sm border border-white/40">
+         
+         {/* Freshness Badge */}
+         <div className="absolute top-3 left-3 md:top-4 md:left-4 flex flex-col gap-2">
+            <div className="bg-white/95 backdrop-blur-md px-2 py-1 rounded-xl flex items-center gap-1.5 shadow-sm border border-white/40">
                <Star className="w-3 h-3 text-brand fill-brand" />
                <span className="text-[10px] font-black text-slate-800 tracking-tighter">{product.rating}</span>
             </div>
-            {product.category === 'Daily' && (
-              <div className="bg-brand text-white px-2.5 py-1 rounded-xl text-[8px] font-black uppercase tracking-widest shadow-brand-glow whitespace-nowrap">
-                Essential
-              </div>
-            )}
+            <motion.div 
+               initial={{ x: -20, opacity: 0 }}
+               whileInView={{ x: 0, opacity: 1 }}
+               className="bg-brand/90 backdrop-blur-md px-2 py-1 rounded-xl flex items-center gap-1.5 shadow-sm text-white"
+            >
+               <Leaf className="w-3 h-3" />
+               <span className="text-[9px] font-black uppercase tracking-tighter">{product.freshnessScore}% Fresh</span>
+            </motion.div>
          </div>
+
+         {/* Today's Arrival Ribbon */}
+         {product.isFreshArrivedToday && (
+            <div className="absolute -right-12 top-4 rotate-45 bg-amber-500 text-white px-12 py-1 text-[8px] font-black uppercase tracking-widest shadow-lg">
+               Fresh Today
+            </div>
+         )}
          
          <div className="absolute bottom-3 right-3 md:bottom-4 md:right-4 opacity-0 group-hover:opacity-100 transition-opacity">
             <div className="bg-dark/80 backdrop-blur-md px-3 py-1.5 rounded-full text-white text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-2 whitespace-nowrap">
-              <div className="w-1.5 h-1.5 bg-brand rounded-full animate-pulse" />
-              In Stock
+              <Zap className="w-2 h-2 text-brand fill-brand" />
+              Nutrient Pick
             </div>
          </div>
       </div>

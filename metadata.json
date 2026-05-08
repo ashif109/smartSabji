@@ -1,6 +1,6 @@
 {
-  "name": "VegieRoute Protocol",
-  "description": "The next-generation hyperlocal agricultural logistics protocol. Delivering farm-fresh produce through a distributed network of high-efficiency nodes in under 20 minutes.",
+  "name": "VegieRoute",
+  "description": "Hyperlocal Digital Mandi Network & Vendor SaaS Ecosystem. Empowering local vendors to deliver fresh-arrived produce directly to trusted neighborhoods with AI-powered transparency.",
   "requestFramePermissions": [
     "geolocation"
   ],

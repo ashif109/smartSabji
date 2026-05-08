@@ -27,3 +27,11 @@ export const PRODUCTS: Product[] = [
   { id: '24', name: 'Ridged Gourd', category: 'Daily', price: 0, unit: 'kg', description: 'Long green gourd with ridges.', imageUrl: 'https://images.unsplash.com/photo-1594533036625-780c65538eec?q=80&w=800&auto=format&fit=crop', stock: 60, sellerId: 'local-farm', rating: 4.3, localNames: ['Turai', 'Turiya', 'Ridge Gourd', 'Peechinga'] },
   { id: '25', name: 'Sweet Potato', category: 'Roots', price: 0, unit: 'kg', description: 'Sweet and starchy orange tubers.', imageUrl: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?q=80&w=800&auto=format&fit=crop', stock: 80, sellerId: 'local-farm', rating: 4.6, localNames: ['Shakarkand', 'Ratalu', 'Sweet Potato', 'Cheeni Kizhangu'] },
 ];
+
+export const MANDI_RATES = [
+  { vegetableName: 'Tomato', currentPrice: 42, previousPrice: 38, trend: 'rising', aiInsight: 'Demand surging due to local festival' },
+  { vegetableName: 'Potato', currentPrice: 28, previousPrice: 30, trend: 'falling', aiInsight: 'New harvest arrivals from Punjab' },
+  { vegetableName: 'Onion', currentPrice: 35, previousPrice: 35, trend: 'stable', aiInsight: 'Buffer stocks keeping prices in check' },
+  { vegetableName: 'Spinach', currentPrice: 15, previousPrice: 20, trend: 'falling', aiInsight: 'Hyperlocal supply excess detected' },
+  { vegetableName: 'Cauliflower', currentPrice: 45, previousPrice: 40, trend: 'rising', aiInsight: 'Seasonal transition affecting yield' },
+];

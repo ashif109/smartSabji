@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Product } from '../types';
-import { X, ShoppingBag, Trash2, Plus, Minus, ArrowRight, Loader2 } from 'lucide-react';
+import { X, ShoppingBag, Trash2, Plus, Minus, ArrowRight, Loader2, Sparkles, Zap, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, formatCurrency } from '../lib/utils';
+import { AIService } from '../services/aiService';
+import { db } from '../firebase';
+import { collection, getDocs, limit, query } from 'firebase/firestore';
 
 interface CartSidebarProps {
   isOpen: boolean;
@@ -10,14 +13,45 @@ interface CartSidebarProps {
   cart: { product: Product; quantity: number }[];
   onUpdateQuantity: (id: string, delta: number) => void;
   onPlaceOrder: () => void;
+  onAddToCart: (product: Product) => void;
   loading?: boolean;
 }
 
-const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, cart, onUpdateQuantity, onPlaceOrder, loading }) => {
+const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, cart, onUpdateQuantity, onPlaceOrder, onAddToCart, loading }) => {
+  const [suggestions, setSuggestions] = useState<{ productId: string; reason: string }[]>([]);
+  const [suggestedProducts, setSuggestedProducts] = useState<Product[]>([]);
+  const [suggesting, setSuggesting] = useState(false);
+
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
   const subtotal = cart.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
   const deliveryFee = subtotal > 500 ? 0 : 40;
   const totalAmount = subtotal + deliveryFee;
+
+  useEffect(() => {
+    if (cart.length > 0 && isOpen) {
+      const fetchSuggestions = async () => {
+        setSuggesting(true);
+        try {
+          const q = query(collection(db, 'products'), limit(20));
+          const snap = await getDocs(q);
+          const allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+          
+          const cartProducts = cart.map(i => i.product);
+          const aiSuggestions = await AIService.getSmartBasketSuggestions(cartProducts, allProducts);
+          setSuggestions(aiSuggestions);
+          
+          // Filter suggested product objects
+          const suggestedIds = aiSuggestions.map(s => s.productId);
+          setSuggestedProducts(allProducts.filter(p => suggestedIds.includes(p.id)));
+        } catch (e) {
+          console.error("AI Assistant busy/unavailable:", e);
+        } finally {
+          setSuggesting(false);
+        }
+      };
+      fetchSuggestions();
+    }
+  }, [cart.length, isOpen]);
 
   return (
     <>
@@ -113,6 +147,54 @@ const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, cart, onUpda
                   </div>
                 </div>
               ))}
+
+              {/* AI Smart Basket Section */}
+              <div className="pt-6 border-t border-gray-100">
+                <div className="flex items-center gap-2 mb-4">
+                  <Sparkles className="w-4 h-4 text-brand fill-brand" />
+                  <h5 className="text-[10px] font-black uppercase text-brand tracking-widest">AI Smart Recommendations</h5>
+                </div>
+                
+                {suggesting ? (
+                  <div className="flex items-center gap-3 py-4 opacity-30">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <p className="text-[10px] font-bold uppercase tracking-widest">Predicting next harvest...</p>
+                  </div>
+                ) : suggestedProducts.length > 0 ? (
+                  <div className="space-y-3">
+                    {suggestedProducts.map(product => {
+                      const suggestion = suggestions.find(s => s.productId === product.id);
+                      return (
+                        <motion.div 
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          key={product.id}
+                          className="group/suggestion bg-brand/5 border border-brand/10 p-4 rounded-3xl flex gap-4 items-center hover:bg-brand/10 transition-colors"
+                        >
+                          <div className="w-12 h-12 rounded-xl overflow-hidden bg-white border border-brand/10 flex-shrink-0">
+                            <img src={product.imageUrl} className="w-full h-full object-cover" alt={product.name} />
+                          </div>
+                          <div className="flex-1">
+                             <div className="flex justify-between items-center ">
+                               <h6 className="text-[11px] font-black text-dark uppercase">{product.name}</h6>
+                               <span className="text-[9px] font-bold text-brand tabular-nums">{formatCurrency(product.price)}</span>
+                             </div>
+                             <p className="text-[9px] font-medium text-slate-500 italic mt-0.5 line-clamp-1">
+                               {suggestion?.reason || "Perfect match for your basket"}
+                             </p>
+                          </div>
+                          <button 
+                            onClick={() => onAddToCart(product)}
+                            className="w-8 h-8 bg-brand text-white rounded-full flex items-center justify-center shadow-brand-glow group-hover/suggestion:scale-110 transition-transform"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
             </div>
           )}
         </div>
