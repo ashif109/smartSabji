@@ -138,14 +138,14 @@ const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, cart, onUpda
             <button 
               onClick={onPlaceOrder}
               disabled={loading}
-              className="w-full btn-brand flex items-center justify-center gap-4 py-6"
+              className="w-full btn-premium py-7"
             >
               {loading ? (
                 <Loader2 className="w-6 h-6 animate-spin" />
               ) : (
                 <>
                   <span className="uppercase tracking-[0.2em] font-black text-sm">Place Delivery Order</span>
-                  <ArrowRight className="w-5 h-5" />
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
             </button>

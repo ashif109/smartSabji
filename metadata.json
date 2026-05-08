@@ -1,12 +1,13 @@
 {
-  "name": "VegieRoute",
-  "description": "Hyperlocal vegetable delivery platform. Fresh vegetables delivered in 30 minutes from nearby vendors.",
+  "name": "VegieRoute Protocol",
+  "description": "The next-generation hyperlocal agricultural logistics protocol. Delivering farm-fresh produce through a distributed network of high-efficiency nodes in under 20 minutes.",
   "requestFramePermissions": [
     "geolocation"
   ],
   "majorCapabilities": [
-    "real_time_tracking",
-    "route_optimization",
-    "ai_recipe_assistant"
+    "hyperlocal_delivery_routing",
+    "real_time_stock_traceability",
+    "ai_powered_culinary_assistant",
+    "premium_subscription_nodes"
   ]
 }

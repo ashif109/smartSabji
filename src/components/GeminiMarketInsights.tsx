@@ -113,21 +113,21 @@ const GeminiMarketInsights: React.FC<GeminiMarketInsightsProps> = ({ orders, use
   };
 
   return (
-    <div className="flex flex-col h-[600px] bg-white border border-gray-100 rounded-[40px] shadow-sm overflow-hidden border-t-4 border-t-brand">
+    <div className="flex flex-col h-[600px] bg-white border border-slate-100 rounded-[40px] shadow-premium overflow-hidden border-t-8 border-t-brand">
       {/* Header */}
-      <div className="p-6 border-b border-gray-50 bg-gray-50/50 flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-brand" />
+      <div className="p-8 border-b border-slate-50 bg-slate-50/30 flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-brand/10 rounded-2xl flex items-center justify-center">
+            <Sparkles className="w-6 h-6 text-brand" />
           </div>
           <div>
-            <h4 className="text-sm font-black uppercase tracking-tighter text-gray-800">VegieRoute Intelligence</h4>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Real-time Market Synthesis</p>
+            <h4 className="text-base font-display font-black uppercase tracking-tighter text-slate-900 italic">Market Engine</h4>
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em]">Real-time Logic Synthesis</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <span className="text-[10px] font-bold text-gray-400">AI ACTIVE</span>
+        <div className="flex items-center gap-2.5 bg-white px-3 py-1.5 rounded-full border border-slate-100">
+          <div className="w-2 h-2 bg-brand rounded-full animate-pulse shadow-brand-glow" />
+          <span className="text-[9px] font-black text-brand uppercase tracking-widest italic">Core Active</span>
         </div>
       </div>
 

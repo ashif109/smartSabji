@@ -20,12 +20,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             <span className="text-2xl font-black tracking-tighter text-dark uppercase">Vegie<span className="text-brand">Route</span></span>
           </div>
           
-          <div className="hidden md:flex items-center gap-8">
-            <a href="#how-it-works" className="text-sm font-bold uppercase tracking-widest text-slate-500 hover:text-brand transition-colors">How it works</a>
-            <a href="#benefits" className="text-sm font-bold uppercase tracking-widest text-slate-500 hover:text-brand transition-colors">Benefits</a>
+          <div className="hidden md:flex items-center gap-10">
+            <a href="#how-it-works" className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 hover:text-brand transition-all">Protocol</a>
+            <a href="#benefits" className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 hover:text-brand transition-all">Integrity</a>
             <button 
               onClick={onStart}
-              className="px-8 py-3 bg-brand text-white rounded-full font-bold uppercase tracking-widest text-xs hover:shadow-xl hover:shadow-brand/20 transition-all active:scale-95"
+              className="btn-premium py-4 px-10 text-[10px] hidden sm:flex"
             >
               Sign In
             </button>
@@ -80,16 +80,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             >
               <button 
                 onClick={onStart}
-                className="btn-brand text-lg px-12 py-6 group"
+                className="btn-premium py-6 px-12 text-lg group"
               >
                 <span>Enter Marketplace</span>
                 <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
               </button>
               <button 
                 onClick={onStart}
-                className="btn-outline text-lg px-12 py-6"
+                className="btn-outline-premium py-6 px-12 text-lg"
               >
-                <MapPin className="w-6 h-6" />
+                <MapPin className="w-6 h-6 text-brand" />
                 <span>Locate Nearby Node</span>
               </button>
             </motion.div>
@@ -224,7 +224,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               
               <button 
                 onClick={onStart}
-                className="btn-brand"
+                className="btn-premium px-12"
               >
                 Join the Network
               </button>

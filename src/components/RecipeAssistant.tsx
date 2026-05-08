@@ -67,24 +67,24 @@ const RecipeAssistant: React.FC<RecipeAssistantProps> = ({ products, onAddToCart
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
-      className="flex flex-col h-full bg-white relative"
+      className="flex flex-col h-full bg-white relative font-sans"
     >
       {/* Header */}
-      <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-brand/5">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center shadow-lg shadow-brand/20">
-            <ChefHat className="text-white w-6 h-6" />
+      <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center shadow-xl">
+            <ChefHat className="text-brand w-7 h-7" />
           </div>
           <div>
-            <h4 className="text-sm font-black uppercase tracking-tighter text-dark">AI Recipe Coach</h4>
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-[10px] font-bold text-gray-400">READY TO COOK</span>
+            <h4 className="text-lg font-display font-black uppercase tracking-tighter text-slate-900 italic">Chef Protocol</h4>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="w-2 h-2 bg-brand rounded-full animate-pulse shadow-brand-glow" />
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Neural Kitchen v2.4</span>
             </div>
           </div>
         </div>
-        <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-          <X className="w-5 h-5 text-gray-400" />
+        <button onClick={onClose} className="w-10 h-10 bg-white border border-slate-100 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors">
+          <X className="w-5 h-5" />
         </button>
       </div>
 

@@ -14,10 +14,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart, quantit
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white border border-slate-100 rounded-[28px] md:rounded-[32px] p-3 md:p-4 flex flex-col gap-3 md:gap-4 group hover:shadow-2xl hover:shadow-brand/5 hover:border-brand/20 transition-all relative overflow-hidden h-full"
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className="bg-white border border-slate-100 rounded-[32px] md:rounded-[40px] p-4 md:p-5 flex flex-col gap-4 md:gap-5 group hover:shadow-premium hover:border-brand/20 transition-all duration-500 relative overflow-hidden h-full group"
     >
-      <div className="relative aspect-square rounded-[20px] md:rounded-[24px] overflow-hidden bg-slate-100 flex items-center justify-center shrink-0">
+      <div className="relative aspect-square rounded-[24px] md:rounded-[32px] overflow-hidden bg-slate-100 flex items-center justify-center shrink-0">
          <img 
            src={product.imageUrl} 
            alt={product.name} 
@@ -28,68 +29,68 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart, quantit
              target.src = 'https://images.unsplash.com/photo-1610348725531-843dff563e2c?q=80&w=400&auto=format&fit=crop';
            }}
          />
-         <div className="absolute top-2 left-2 md:top-3 md:left-3 flex flex-wrap gap-1 md:gap-2">
-            <div className="bg-white/90 backdrop-blur-md px-1.5 py-0.5 md:px-2 md:py-1 rounded-lg flex items-center gap-1 shadow-sm border border-slate-100">
-               <Star className="w-2.5 h-2.5 md:w-3 md:h-3 text-brand fill-brand" />
-               <span className="text-[9px] md:text-[10px] font-bold text-dark tracking-tighter">{product.rating}</span>
+         <div className="absolute top-3 left-3 md:top-4 md:left-4 flex flex-wrap gap-2">
+            <div className="bg-white/90 backdrop-blur-md px-2 py-1 rounded-xl flex items-center gap-1.5 shadow-sm border border-white/40">
+               <Star className="w-3 h-3 text-brand fill-brand" />
+               <span className="text-[10px] font-black text-slate-800 tracking-tighter">{product.rating}</span>
             </div>
             {product.category === 'Daily' && (
-              <div className="bg-brand text-white px-1.5 py-0.5 md:px-2 md:py-1 rounded-lg text-[7px] md:text-[8px] font-black uppercase tracking-widest shadow-lg shadow-brand/20 whitespace-nowrap">
+              <div className="bg-brand text-white px-2.5 py-1 rounded-xl text-[8px] font-black uppercase tracking-widest shadow-brand-glow whitespace-nowrap">
                 Essential
               </div>
             )}
          </div>
          
-         <div className="absolute bottom-2 right-2 md:bottom-3 md:right-3">
-            <div className="bg-dark/80 backdrop-blur-md px-2 py-1 md:px-3 md:py-1.5 rounded-full text-white text-[7px] md:text-[9px] font-bold uppercase tracking-widest flex items-center gap-1.5 md:gap-2 whitespace-nowrap">
-              <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-brand rounded-full animate-pulse" />
-              Node
+         <div className="absolute bottom-3 right-3 md:bottom-4 md:right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="bg-dark/80 backdrop-blur-md px-3 py-1.5 rounded-full text-white text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-2 whitespace-nowrap">
+              <div className="w-1.5 h-1.5 bg-brand rounded-full animate-pulse" />
+              In Stock
             </div>
          </div>
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col gap-1 md:gap-2 px-0.5 md:px-1">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-1">
-          <p className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-slate-400 group-hover:text-brand transition-colors truncate">{product.category}</p>
+      <div className="flex-1 flex flex-col gap-2 px-1">
+        <div className="flex justify-between items-start gap-2">
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-300 group-hover:text-brand transition-colors truncate">{product.category}</p>
           {product.localNames && product.localNames[0] && (
-            <span className="text-[8px] md:text-[9px] font-bold text-slate-300 uppercase italic truncate">
-              aka {product.localNames[0]}
+            <span className="text-[9px] font-black text-slate-200 uppercase italic truncate">
+              {product.localNames[0]}
             </span>
           )}
         </div>
-        <h3 className="text-sm md:text-base font-display font-bold text-dark tracking-tight uppercase line-clamp-2 md:line-clamp-1 leading-tight md:leading-normal">{product.name}</h3>
-        <p className="hidden md:line-clamp-2 text-[10px] font-medium text-slate-400 leading-relaxed">{product.description}</p>
+        <h3 className="text-base md:text-xl font-display font-black text-slate-900 tracking-tighter uppercase line-clamp-1 leading-tight group-hover:text-brand transition-colors">{product.name}</h3>
+        <p className="line-clamp-2 text-[11px] font-medium text-slate-400 leading-relaxed md:min-h-[3rem]">{product.description}</p>
       </div>
 
-      <div className="flex items-center justify-between mt-auto pt-3 md:pt-4 border-t border-slate-50 transition-colors group-hover:border-brand/10">
+      <div className="flex items-center justify-between mt-auto pt-5 border-t border-slate-50 transition-colors group-hover:border-brand/10">
         <div className="flex flex-col">
-          <span className="text-[8px] md:text-[10px] font-bold text-slate-300 uppercase tracking-widest">Pricing</span>
-          <span className="text-xs md:text-sm font-display font-bold text-dark tabular-nums tracking-tight">{product.unit || 'kg'} Measure</span>
+          <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em]">Measures</span>
+          <span className="text-sm font-display font-black text-slate-900 tabular-nums tracking-tighter italic">PER {product.unit?.toUpperCase() || 'KG'}</span>
         </div>
 
         {quantity > 0 && onUpdateQuantity ? (
-          <div className="flex items-center gap-1.5 md:gap-4 bg-brand text-white rounded-xl md:rounded-2xl p-1 px-2 md:px-3 shadow-lg shadow-brand/20">
+          <div className="flex items-center gap-2 bg-brand text-white rounded-[20px] p-1.5 px-3 shadow-brand-glow">
              <button 
                onClick={() => onUpdateQuantity(product.id, -1)}
-               className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center hover:scale-125 transition-transform"
+               className="w-8 h-8 flex items-center justify-center hover:scale-125 transition-transform"
              >
-               <Minus className="w-3.5 h-3.5 md:w-4 md:h-4" />
+               <Minus className="w-4 h-4" />
              </button>
-             <span className="text-xs md:text-sm font-bold tabular-nums min-w-[15px] md:min-w-[20px] text-center">{quantity}</span>
+             <span className="text-sm font-black tabular-nums min-w-[20px] text-center">{quantity}</span>
              <button 
                onClick={() => onUpdateQuantity(product.id, 1)}
-               className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center hover:scale-125 transition-transform"
+               className="w-8 h-8 flex items-center justify-center hover:scale-125 transition-transform"
              >
-               <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" />
+               <Plus className="w-4 h-4" />
              </button>
           </div>
         ) : (
           <button 
             onClick={() => onAddToCart(product)}
-            className="h-10 md:h-12 px-4 md:px-6 bg-slate-900 text-white rounded-xl md:rounded-2xl flex items-center justify-center gap-1.5 md:gap-2 shadow-xl hover:bg-brand hover:scale-105 transition-all active:scale-95 group/btn"
+            className="btn-premium px-6 py-4 shadow-none translate-y-0 group-hover:-translate-y-1 transition-transform"
           >
-            <Plus className="w-3.5 h-3.5 md:w-4 md:h-4 group-hover/btn:rotate-90 transition-transform" />
-            <span className="text-[9px] md:text-[11px] font-bold uppercase tracking-widest">Add</span>
+            <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" />
+            <span>Add</span>
           </button>
         )}
       </div>

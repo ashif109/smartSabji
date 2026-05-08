@@ -554,7 +554,7 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
                  </div>
                  <button 
                    onClick={handleOptimize}
-                   className="relative z-10 bg-white text-brand px-12 py-5 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-105 active:scale-95 transition-all w-full md:w-auto"
+                   className="btn-premium px-12 py-5 text-sm w-full md:w-auto border-brand-dark shadow-xl"
                  >
                    Open Radar
                  </button>
@@ -594,24 +594,24 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
                           {order.status === 'accepted' ? (
                             <button 
                               onClick={() => startDeparture(order.id)}
-                              className="flex-1 bg-dark text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-dark/20 hover:bg-black transition-all flex items-center justify-center gap-2"
+                              className="btn-premium flex-1 py-5 text-xs gap-2 !bg-slate-900 border-black"
                             >
-                              <Play className="w-4 h-4 fill-white" />
+                              <Play className="w-4 h-4 fill-brand text-brand" />
                               Start Delivery
                             </button>
                           ) : (
                             <button 
                               onClick={() => completeOrder(order.id, order.totalAmount)}
-                              className="flex-1 bg-brand text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-brand/20 hover:bg-brand/90 transition-all"
+                              className="btn-premium flex-1 py-5 text-xs"
                             >
                               Mark Delivered
                             </button>
                           )}
                           <button 
                             onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${order.location.lat},${order.location.lng}`)}
-                            className="w-16 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center shadow-sm hover:bg-gray-100 transition-all"
+                            className="w-16 bg-white border border-slate-100 rounded-2xl flex items-center justify-center shadow-premium hover:bg-slate-50 transition-all"
                           >
-                            <Navigation className="w-6 h-6 text-gray-400" />
+                            <Navigation className="w-6 h-6 text-brand" />
                           </button>
                         </div>
                      </div>
@@ -705,7 +705,7 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
                   <div className="absolute bottom-6 left-6 right-6 flex justify-center items-center pointer-events-none">
                      <button 
                        onClick={() => setActiveTab('dashboard')}
-                       className="bg-brand text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs pointer-events-auto shadow-2xl hover:scale-105 active:scale-95 transition-all"
+                       className="btn-premium px-10 py-5 text-xs pointer-events-auto shadow-2xl"
                      >
                        Exit Radar
                      </button>
