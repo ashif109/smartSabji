@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { db, auth } from '../firebase';
 import { collection, addDoc, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
@@ -14,6 +14,7 @@ import MapContainer from './MapContainer';
 import RewardsView from './RewardsView';
 import { CartService, CartItem } from '../services/CartService';
 import { AIService } from '../services/aiService';
+import { getVegetableImage } from '../lib/imageMapping';
 
 interface CustomerViewProps {
   user: UserProfile;
@@ -36,6 +37,9 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
   const [sellersInfo, setSellersInfo] = useState<Record<string, SellerProfile>>({});
   const [isListening, setIsListening] = useState(false);
   const [voiceResult, setVoiceResult] = useState<string | null>(null);
+  const [voiceTimePreference, setVoiceTimePreference] = useState<string | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const transcriptRef = useRef<string>('');
 
   // Sync Cart to LocalStorage
   useEffect(() => {
@@ -149,7 +153,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
     }
   };
 
-  const placeOrder = async () => {
+  const placeOrder = async (timePreference: string) => {
     if (!selectedLocation || !isLocationConfirmed) {
       setShowLocationModal(true);
       return;
@@ -168,7 +172,8 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
         status: 'pending',
         location: selectedLocation,
         totalAmount: totalInfo.total,
-        timeSlot: '30 MIN EXPRESS',
+        timeSlot: 'HYPERLOCAL EXPRESS',
+        deliveryTimePreference: timePreference,
         createdAt: new Date().toISOString()
       });
 
@@ -214,40 +219,94 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
 
   const handleVoiceOrder = async () => {
     if (isListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
       setIsListening(false);
       return;
     }
 
-    setIsListening(true);
-    setVoiceResult("Listening for your harvest...");
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     
-    // In a real browser we use SpeechRecognition API
-    // Here we simulate the result after 2 seconds
-    setTimeout(async () => {
-      const simulatedText = "Add 2kg potatoes and 500g tomatoes to my bag";
+    if (!SpeechRecognition) {
+      setVoiceResult("Voice not supported in this browser.");
+      setTimeout(() => setVoiceResult(null), 3000);
+      return;
+    }
+
+    setIsListening(true);
+    setVoiceResult("Listening...");
+    transcriptRef.current = '';
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-IN'; // Optimized for Indian context
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognitionRef.current = recognition;
+
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results)
+        .map((result: any) => result[0])
+        .map((result: any) => result.transcript)
+        .join('');
+      transcriptRef.current = transcript;
+      setVoiceResult(`Transcribing: "${transcript}"`);
+    };
+
+    recognition.onend = async () => {
       setIsListening(false);
-      setVoiceResult(`AI Processing: "${simulatedText}"`);
+      const finalTranscript = transcriptRef.current;
+      
+      if (!finalTranscript || finalTranscript === '') {
+        setVoiceResult("No voice detected.");
+        setTimeout(() => setVoiceResult(null), 2000);
+        return;
+      }
+
+      setVoiceResult(`AI Parsing: "${finalTranscript}"`);
       
       try {
-        const result = await AIService.parseVoiceOrder(simulatedText, products);
-        if (result.items.length > 0) {
+        const result = await AIService.parseVoiceOrder(finalTranscript, products);
+        
+        if (result.timePreference) {
+          setVoiceTimePreference(result.timePreference);
+        }
+
+        if (result.items && result.items.length > 0) {
           result.items.forEach(item => {
             const product = products.find(p => p.id === item.productId);
             if (product) {
               setCart(prev => CartService.addToCart(prev, product, item.quantity));
             }
           });
-          setVoiceResult(`Success! Added ${result.items.length} items to your bag.`);
-          setTimeout(() => setVoiceResult(null), 3000);
+          
+          let successMsg = `Success! Added ${result.items.length} items.`;
+          if (result.timePreference) {
+            successMsg += ` (Time: ${result.timePreference})`;
+          }
+          setVoiceResult(successMsg);
+          setTimeout(() => setVoiceResult(null), 4000);
+        } else if (result.timePreference) {
+           setVoiceResult(`Availability set: "${result.timePreference}". Review and place order.`);
+           setTimeout(() => setVoiceResult(null), 4000);
         } else {
-          setVoiceResult("AI couldn't find those items in current harvest.");
+          setVoiceResult("AI couldn't find items. Try 'Add 1kg Tomato'");
           setTimeout(() => setVoiceResult(null), 3000);
         }
       } catch (e) {
-        setVoiceResult("AI Core offline. Try again.");
+        setVoiceResult("AI Assistant busy.");
         setTimeout(() => setVoiceResult(null), 3000);
       }
-    }, 2000);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech Error:", event.error);
+      setIsListening(false);
+      setVoiceResult(`Error: ${event.error}`);
+      setTimeout(() => setVoiceResult(null), 3000);
+    };
+
+    recognition.start();
   };
 
   return (
@@ -300,7 +359,14 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
            >
               {isListening ? <MicOff className="w-4 h-4 md:w-5 md:h-5" /> : <Mic className="w-4 h-4 md:w-5 md:h-5" />}
               {voiceResult && (
-                <div className="absolute top-14 right-0 bg-dark text-white px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest whitespace-nowrap shadow-2xl z-[60]">
+                <div className="absolute top-14 right-0 bg-dark/95 backdrop-blur-xl text-white px-4 py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap shadow-2xl z-[60] border border-white/10 flex items-center gap-3">
+                  {isListening && (
+                    <div className="flex gap-0.5 items-center">
+                      <motion.div animate={{ height: [4, 10, 4] }} transition={{ repeat: Infinity, duration: 0.5 }} className="w-0.5 bg-brand" />
+                      <motion.div animate={{ height: [8, 4, 8] }} transition={{ repeat: Infinity, duration: 0.6 }} className="w-0.5 bg-brand" />
+                      <motion.div animate={{ height: [6, 12, 6] }} transition={{ repeat: Infinity, duration: 0.4 }} className="w-0.5 bg-brand" />
+                    </div>
+                  )}
                   {voiceResult}
                 </div>
               )}
@@ -466,7 +532,12 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
                               className="flex items-center gap-6 p-4 hover:bg-slate-50 rounded-[24px] transition-all cursor-pointer group"
                             >
                                <div className="w-16 h-16 rounded-[20px] overflow-hidden bg-slate-100">
-                                  <img src={p.imageUrl} className="w-full h-full object-cover" alt={p.name} />
+                                  <img 
+                                    src={getVegetableImage(p.name)} 
+                                    className="w-full h-full object-cover" 
+                                    alt={p.name} 
+                                    loading="lazy"
+                                  />
                                </div>
                                <div className="flex-1">
                                   <h4 className="text-base font-black uppercase tracking-tight text-slate-900 group-hover:text-brand transition-colors">{p.name}</h4>
@@ -505,15 +576,15 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
                      <span className="w-1.5 h-1.5 bg-brand rounded-full animate-ping" />
                      <span className="text-[9px] font-black text-brand uppercase tracking-widest">Node #04 Active</span>
                   </div>
-                  <h2 className="text-5xl md:text-8xl font-display font-black tracking-tighter leading-[0.85] text-slate-900 uppercase italic">
+                  <h2 className="text-4xl sm:text-5xl md:text-8xl font-display font-black tracking-tighter leading-[0.85] text-slate-900 uppercase italic">
                     The Fresh <br />
                     <span className="text-brand">Protocol.</span>
                   </h2>
                   <p className="text-slate-500 text-base md:text-xl font-medium max-w-lg leading-relaxed">
                     Direct from farmer nodes to your doorstep in 20 minutes. Zero middleman. 100% transparency.
                   </p>
-                  <div className="flex flex-col sm:flex-row gap-4">
-                     <button className="btn-premium px-8 md:px-12 group py-4 md:py-5">
+               <div className="flex flex-col sm:flex-row gap-4">
+                  <button className="btn-premium px-6 sm:px-8 md:px-12 group py-4 md:py-5">
                         <span>Harvest Map</span>
                         <ArrowRight className="w-5 h-5 md:w-6 md:h-6 group-hover:translate-x-1 transition-transform" />
                      </button>
@@ -588,7 +659,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
                   <div className="w-fit bg-brand/20 text-brand px-3 md:px-4 py-1 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] border border-brand/20 mx-auto md:mx-0">
                      Proprietary Chef-Mind v2
                   </div>
-                  <h3 className="text-3xl md:text-6xl font-display font-black tracking-tighter uppercase italic leading-[0.9]">
+                  <h3 className="text-2xl sm:text-3xl md:text-6xl font-display font-black tracking-tighter uppercase italic leading-[0.9]">
                     Stuck with <br /> <span className="text-brand">Kitchin-Logic?</span>
                   </h3>
                   <p className="text-slate-400 text-xs md:text-sm font-medium max-w-sm tracking-wide leading-relaxed mx-auto md:mx-0">
@@ -602,8 +673,8 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </button>
                </div>
-               <div className="w-32 h-32 md:w-80 md:h-80 bg-white/5 rounded-[32px] md:rounded-[48px] backdrop-blur-xl border border-white/10 flex items-center justify-center transform rotate-6 hover:rotate-0 transition-transform duration-700 shadow-2xl group-hover:bg-brand/10">
-                  <ChefHat className="w-16 md:w-40 h-16 md:h-40 text-brand opacity-40 group-hover:opacity-100 transition-opacity" />
+               <div className="w-24 h-24 sm:w-32 sm:h-32 md:w-80 md:h-80 bg-white/5 rounded-[24px] sm:rounded-[32px] md:rounded-[48px] backdrop-blur-xl border border-white/10 flex items-center justify-center transform rotate-6 hover:rotate-0 transition-transform duration-700 shadow-2xl group-hover:bg-brand/10">
+                  <ChefHat className="w-12 h-12 sm:w-16 sm:h-16 md:w-40 md:h-40 text-brand opacity-40 group-hover:opacity-100 transition-opacity" />
                </div>
             </motion.div>
 
@@ -931,6 +1002,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({ user }) => {
         onPlaceOrder={placeOrder}
         onAddToCart={addToCart}
         loading={loading}
+        preselectedTime={voiceTimePreference}
       />
     </div>
   );

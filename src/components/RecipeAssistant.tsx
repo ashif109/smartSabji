@@ -5,6 +5,7 @@ import { cn } from '../lib/utils';
 import { Product } from '../types';
 import { GeminiService } from '../services/GeminiService';
 import { CartService } from '../services/CartService';
+import { getVegetableImage } from '../lib/imageMapping';
 
 interface RecipeAssistantProps {
   products: Product[];
@@ -70,16 +71,16 @@ const RecipeAssistant: React.FC<RecipeAssistantProps> = ({ products, onAddToCart
       className="flex flex-col h-full bg-white relative font-sans"
     >
       {/* Header */}
-      <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center shadow-xl">
-            <ChefHat className="text-brand w-7 h-7" />
+      <div className="p-4 sm:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-900 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-xl">
+            <ChefHat className="text-brand w-5 h-5 sm:w-7 sm:h-7" />
           </div>
           <div>
-            <h4 className="text-lg font-display font-black uppercase tracking-tighter text-slate-900 italic">Chef Protocol</h4>
-            <div className="flex items-center gap-2 mt-1">
-              <div className="w-2 h-2 bg-brand rounded-full animate-pulse shadow-brand-glow" />
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Neural Kitchen v2.4</span>
+            <h4 className="text-base sm:text-lg font-display font-black uppercase tracking-tighter text-slate-900 italic">Chef Protocol</h4>
+            <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1">
+              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-brand rounded-full animate-pulse shadow-brand-glow" />
+              <span className="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Neural Kitchen v2.4</span>
             </div>
           </div>
         </div>
@@ -91,7 +92,7 @@ const RecipeAssistant: React.FC<RecipeAssistantProps> = ({ products, onAddToCart
       {/* Chat Area */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-6 space-y-6"
+        className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6"
       >
         {messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-30">
@@ -123,7 +124,12 @@ const RecipeAssistant: React.FC<RecipeAssistantProps> = ({ products, onAddToCart
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   {getSuggestedProducts(msg.suggestedProducts).map(product => (
                     <div key={product.id} className="min-w-[140px] bg-white border border-gray-100 rounded-2xl p-3 shadow-sm flex flex-col items-center text-center space-y-2 border-b-4 border-b-brand/20">
-                      <img src={product.imageUrl} alt={product.name} className="w-12 h-12 rounded-full object-cover border border-gray-100" />
+                      <img 
+                        src={getVegetableImage(product.name)} 
+                        alt={product.name} 
+                        className="w-12 h-12 rounded-full object-cover border border-gray-100" 
+                        loading="lazy"
+                      />
                       <p className="text-[10px] font-black uppercase tracking-tight line-clamp-1">{product.name}</p>
                       <button 
                         onClick={() => onAddToCart(product)}
@@ -171,7 +177,7 @@ const RecipeAssistant: React.FC<RecipeAssistantProps> = ({ products, onAddToCart
       )}
 
       {/* Input Area */}
-      <form onSubmit={handleAsk} className="p-6 pt-2 border-t border-gray-50 bg-white">
+      <form onSubmit={handleAsk} className="p-4 sm:p-6 pt-2 border-t border-gray-50 bg-white">
         <div className="relative group">
           <input 
             type="text" 

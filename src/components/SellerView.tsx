@@ -2,13 +2,14 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { db, auth } from '../firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, runTransaction, addDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
-import { TrendingUp, Map, CheckCircle, Navigation, DollarSign, QrCode, Package, Users, ShieldCheck, AlertCircle, Play, MoreVertical, Signal, MapPin, Activity, Clock, Loader2, Leaf, Sprout, Upload, X, Star, UserX, LogOut, ShoppingBag, Settings, Store, Bell, Gift, BarChart3, ListChecks } from 'lucide-react';
+import { TrendingUp, Map, CheckCircle, Navigation, DollarSign, QrCode, Package, Users, ShieldCheck, AlertCircle, Play, MoreVertical, Signal, MapPin, Activity, Clock, Loader2, Leaf, Sprout, Upload, X, Star, UserX, LogOut, ShoppingBag, Settings, Store, Bell, Gift, BarChart3, ListChecks, Zap } from 'lucide-react';
 import { Order, SellerProfile, MandiRate, Product } from '../types';
 import { MANDI_RATES } from '../constants';
 import MapContainer from './MapContainer';
 import VendorAnalytics from './VendorAnalytics';
 import { cn, formatCurrency, handleFirestoreError, OperationType } from '../lib/utils';
 import { AIService } from '../services/aiService';
+import { getVegetableImage } from '../lib/imageMapping';
 
 interface SellerViewProps {
   seller: SellerProfile;
@@ -16,7 +17,7 @@ interface SellerViewProps {
 
 const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'map' | 'analytics' | 'inventory'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'map' | 'analytics' | 'inventory' | 'subscription'>('dashboard');
   const [mandiRates, setMandiRates] = useState<MandiRate[]>([]);
   const [mandiInsight, setMandiInsight] = useState<string>('');
   const [optimizedRoute, setOptimizedRoute] = useState<Order[]>([]);
@@ -656,8 +657,8 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
 
               {/* Shop Identity Section */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-2 bg-white border border-gray-100 rounded-[32px] p-8 flex flex-col sm:flex-row gap-8 shadow-sm group">
-                  <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gray-50 rounded-[24px] border border-gray-100 flex-shrink-0 overflow-hidden flex items-center justify-center relative">
+                <div className="md:col-span-2 bg-white border border-gray-100 rounded-[24px] sm:rounded-[32px] p-6 sm:p-8 flex flex-col sm:flex-row gap-6 sm:gap-8 shadow-sm group">
+                  <div className="w-20 h-20 sm:w-32 sm:h-32 bg-gray-50 rounded-[20px] sm:rounded-[24px] border border-gray-100 flex-shrink-0 overflow-hidden flex items-center justify-center relative">
                     {seller.businessDetails?.logoUrl ? (
                       <img src={seller.businessDetails.logoUrl} className="w-full h-full object-cover" alt="Shop Logo" />
                     ) : (
@@ -688,11 +689,11 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
                     </p>
                   </div>
                 </div>
-                <div className="bg-brand/5 border border-brand/10 rounded-[32px] p-8 space-y-6 flex flex-col justify-center">
+                <div className="bg-brand/5 border border-brand/10 rounded-[24px] sm:rounded-[32px] p-6 sm:p-8 space-y-4 sm:space-y-6 flex flex-col justify-center">
                    <div className="space-y-1">
-                      <p className="text-[10px] font-black text-brand uppercase tracking-widest">Trust Index</p>
-                      <div className="flex items-center gap-3">
-                        <h4 className="text-4xl font-black text-brand tracking-tighter">{seller.averageRating?.toFixed(1) || "5.0"}</h4>
+                      <p className="text-[9px] sm:text-[10px] font-black text-brand uppercase tracking-widest">Trust Index</p>
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <h4 className="text-3xl sm:text-4xl font-black text-brand tracking-tighter">{seller.averageRating?.toFixed(1) || "5.0"}</h4>
                         <div className="flex gap-0.5">
                           {[1, 2, 3, 4, 5].map(s => (
                             <Star key={s} className={cn("w-3 h-3", s <= (seller.averageRating || 5) ? "text-brand fill-brand" : "text-brand/20")} />
@@ -747,7 +748,15 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
                           <span className="text-2xl font-black tabular-nums">{formatCurrency(order.totalAmount)}</span>
                         </div>
                         <div className="space-y-4">
-                           <h4 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-gray-800 leading-none">{order.location.address}</h4>
+                           <div className="flex justify-between items-start">
+                              <h4 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-gray-800 leading-none">{order.location.address}</h4>
+                              {order.deliveryTimePreference && (
+                                <div className="bg-brand text-white px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-lg shadow-brand/20">
+                                   <Clock className="w-3.5 h-3.5" />
+                                   <span className="text-[10px] font-black uppercase italic tracking-tighter">{order.deliveryTimePreference}</span>
+                                </div>
+                              )}
+                           </div>
                            <div className="flex flex-wrap gap-2">
                              {order.items.map((i, idx) => (
                                <span key={idx} className="bg-gray-50 px-3 py-1.5 rounded-xl text-[11px] font-bold text-gray-500 uppercase">
@@ -836,6 +845,145 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
              </motion.div>
           )}
 
+          {activeTab === 'subscription' && (
+             <motion.div 
+               key="subscription"
+               initial={{ opacity: 0, scale: 0.98 }}
+               animate={{ opacity: 1, scale: 1 }}
+               className="space-y-8"
+             >
+               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-1">
+                 <div>
+                   <h3 className="text-2xl sm:text-3xl font-display font-black text-slate-900 tracking-tight uppercase italic text-gradient-brand">Membership Hub</h3>
+                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Manage your growth and platform access</p>
+                 </div>
+                 <div className="flex items-center gap-3 bg-white px-6 py-3 rounded-2xl border border-slate-100 shadow-sm">
+                   <div className="w-2 h-2 bg-brand rounded-full animate-pulse" />
+                   <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Next Billing: Aug 2026</span>
+                 </div>
+               </div>
+
+               {/* Current Plan Hero */}
+               <div className="glass-premium !bg-dark rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 md:p-12 text-white relative overflow-hidden group border-none">
+                 <div className="absolute top-0 right-0 w-96 h-96 bg-brand/10 rounded-full blur-[120px] -mr-48 -mt-48 group-hover:bg-brand/20 transition-colors duration-700" />
+                 <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                   <div className="space-y-6">
+                     <div className="flex items-center gap-3">
+                        <span className="px-3 py-1 bg-brand text-dark text-[9px] font-black uppercase rounded-full">Active Plan</span>
+                        <h4 className="text-3xl sm:text-4xl md:text-5xl font-display font-black tracking-tighter italic uppercase">{seller.membershipPlan || 'Standard'}</h4>
+                     </div>
+                     <p className="text-slate-400 text-sm font-medium leading-relaxed max-w-md">
+                       You are currently optimizing your local mandi with our {seller.membershipPlan || 'standard'} toolkit. Upgrade to Premium to unlock AI-powered demand forecasting and priority delivery radar.
+                     </p>
+                     <div className="flex flex-wrap gap-4">
+                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-300">
+                          <CheckCircle className="w-4 h-4 text-brand" />
+                          Up to 20 Daily Deliveries
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-300">
+                          <CheckCircle className="w-4 h-4 text-brand" />
+                          Basic Inventory AI
+                        </div>
+                     </div>
+                   </div>
+                   
+                   <div className="bg-white/5 backdrop-blur-xl rounded-[32px] p-8 border border-white/10 space-y-8">
+                      <div className="flex justify-between items-end border-b border-white/5 pb-6">
+                        <div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Annual Savings Applied</p>
+                          <p className="text-3xl font-display font-black italic">₹0 <span className="text-sm font-bold text-slate-500 not-italic uppercase tracking-widest">/ Year</span></p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-black text-brand uppercase tracking-widest mb-2">Status</p>
+                          <p className="text-xs font-black uppercase tracking-wider">Lifetime Free</p>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Platform Utilization</p>
+                        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                          <div className="h-full bg-brand w-[15%] rounded-full" />
+                        </div>
+                        <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest">15% of Standard Volume used this week</p>
+                      </div>
+                   </div>
+                 </div>
+               </div>
+
+               {/* Plan Grid */}
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                 {[
+                   { 
+                     id: 'standard', 
+                     name: 'Standard', 
+                     price: 'Free', 
+                     desc: 'Perfect for new hyperlocal nodes just starting digitization.',
+                     features: ['20 Live Orders/Day', 'Basic Analytics', 'Standard Support', 'QR Payments'],
+                     color: 'slate'
+                   },
+                   { 
+                     id: 'premium', 
+                     name: 'Premium', 
+                     price: '₹499/mo', 
+                     desc: 'Designed for high-velocity vendors looking to dominate neighborhoods.',
+                     features: ['Unlimited Orders', 'AI Demand Radar', 'Priority Delivery SEO', 'WhatsApp Automation'],
+                     color: 'brand',
+                     highlight: true
+                   },
+                   { 
+                     id: 'enterprise', 
+                     name: 'Enterprise', 
+                     price: 'Contact Sales', 
+                     desc: 'Bespoke logistics solutions for large-scale farm networks.',
+                     features: ['Custom API Access', 'Multi-Store Dash', 'Dedicated Account Manager', 'White-label Support'],
+                     color: 'dark'
+                   }
+                 ].map((plan) => (
+                   <div 
+                     key={plan.id}
+                     className={cn(
+                       "premium-card flex flex-col p-8 transition-all duration-500 group",
+                       plan.highlight ? "border-brand shadow-brand-glow/10 ring-1 ring-brand/50 relative" : "hover:border-slate-200"
+                     )}
+                   >
+                     {plan.highlight && (
+                       <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-brand text-dark px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-brand-glow">
+                         Most Popular for Scale
+                       </div>
+                     )}
+                     <div className="space-y-6 flex-1">
+                        <div>
+                          <p className={cn("text-[10px] font-black uppercase tracking-widest mb-1", plan.highlight ? "text-brand" : "text-slate-400")}>{plan.name}</p>
+                          <h5 className="text-3xl font-display font-black italic uppercase tracking-tighter">{plan.price}</h5>
+                        </div>
+                        <p className="text-xs font-medium text-slate-500 leading-relaxed mb-6">
+                          {plan.desc}
+                        </p>
+                        <div className="space-y-3">
+                          {plan.features.map((feat, i) => (
+                            <div key={i} className="flex items-center gap-3 text-[10px] font-bold text-slate-600 uppercase tracking-tight">
+                               <div className={cn("w-1.5 h-1.5 rounded-full", plan.highlight ? "bg-brand" : "bg-slate-300")} />
+                               {feat}
+                            </div>
+                          ))}
+                        </div>
+                     </div>
+                     
+                     <button className={cn(
+                       "w-full py-4 mt-10 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
+                       plan.id === (seller.membershipPlan || 'standard') 
+                         ? "bg-slate-50 text-slate-400 border border-slate-100 cursor-not-allowed"
+                         : plan.highlight 
+                           ? "bg-brand text-dark shadow-brand-glow hover:translate-y-[-2px]" 
+                           : "bg-dark text-white hover:bg-slate-900"
+                     )}>
+                       {plan.id === (seller.membershipPlan || 'standard') ? 'Current Plan' : `Upgrade to ${plan.name}`}
+                     </button>
+                   </div>
+                 ))}
+               </div>
+             </motion.div>
+          )}
+
           {activeTab === 'inventory' && (
              <motion.div 
                key="inventory"
@@ -856,7 +1004,12 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
                  {products.map(product => (
                    <div key={product.id} className="premium-card group overflow-hidden">
                       <div className="relative h-48 -mx-8 -mt-8 mb-6 overflow-hidden">
-                        <img src={product.imageUrl} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt={product.name} />
+                        <img 
+                          src={getVegetableImage(product.name)} 
+                          className="w-full h-full object-cover transition-transform group-hover:scale-110" 
+                          alt={product.name} 
+                          loading="lazy"
+                        />
                         <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-sm">
                            <Leaf className="w-3 h-3 text-brand" />
                            <span className="text-[10px] font-black uppercase text-brand">{product.freshnessScore}% Fresh</span>
@@ -1106,6 +1259,7 @@ const SellerView: React.FC<SellerViewProps> = ({ seller }) => {
           {[
             { id: 'dashboard', icon: Store, label: 'HUB' },
             { id: 'analytics', icon: BarChart3, label: 'INSIGHTS' },
+            { id: 'subscription', icon: ShieldCheck, label: 'MEMBERSHIP' },
             { id: 'map', icon: Activity, label: 'RADAR' },
             { id: 'inventory', icon: ListChecks, label: 'STOCK' },
           ].map((item) => (

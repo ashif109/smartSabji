@@ -129,6 +129,7 @@ export interface Order {
     address: string;
   };
   timeSlot: string;
+  deliveryTimePreference?: string;
   notes?: string;
   totalAmount: number;
   createdAt: string;

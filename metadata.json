@@ -2,6 +2,7 @@
   "name": "VegieRoute",
   "description": "Hyperlocal Digital Mandi Network & Vendor SaaS Ecosystem. Empowering local vendors to deliver fresh-arrived produce directly to trusted neighborhoods with AI-powered transparency.",
   "requestFramePermissions": [
+    "microphone",
     "geolocation"
   ],
   "majorCapabilities": [

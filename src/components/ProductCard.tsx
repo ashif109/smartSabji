@@ -1,7 +1,8 @@
 import React from 'react';
 import { Product } from '../types';
-import { Star, Plus, Minus, Leaf, Zap } from 'lucide-react';
+import { Star, Plus, Minus, Leaf, Zap, ImageOff } from 'lucide-react';
 import { motion } from 'motion/react';
+import { getVegetableImage } from '../lib/imageMapping';
 
 interface ProductCardProps {
   product: Product;
@@ -11,22 +12,25 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart, quantity = 0, onUpdateQuantity }) => {
+  const displayImage = getVegetableImage(product.name);
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      className="bg-white border border-slate-100 rounded-[32px] md:rounded-[40px] p-4 md:p-5 flex flex-col gap-4 md:gap-5 group hover:shadow-premium hover:border-brand/20 transition-all duration-500 relative overflow-hidden h-full group"
+      className="bg-white border border-slate-100 rounded-[32px] md:rounded-[40px] p-4 md:p-5 flex flex-col gap-4 md:gap-5 group hover:shadow-premium hover:border-brand/20 transition-all duration-500 relative overflow-hidden h-full"
     >
       <div className="relative aspect-square rounded-[24px] md:rounded-[32px] overflow-hidden bg-slate-100 flex items-center justify-center shrink-0 group/img">
          <img 
-           src={product.imageUrl} 
+           src={displayImage} 
            alt={product.name} 
+           loading="lazy"
            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" 
            referrerPolicy="no-referrer"
            onError={(e) => {
              const target = e.target as HTMLImageElement;
-             target.src = 'https://images.unsplash.com/photo-1610348725531-843dff563e2c?q=80&w=400&auto=format&fit=crop';
+             target.src = '/vegetables/default.webp';
            }}
          />
          
